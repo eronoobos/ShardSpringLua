@@ -163,6 +163,7 @@ function gadget:UnitDestroyed(unitId, unitDefId, teamId, attackerId, attackerDef
 			thisAI:UnitDead(unit)
 			-- thisAI:UnitDestroyed(unitId, unitDefId, teamId, attackerId, attackerDefId, attackerTeamId)
 		end
+		Shard:unshardify_unit(self.engineUnit)
 	end
 end
 
