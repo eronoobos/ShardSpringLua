@@ -95,7 +95,6 @@ function gadget:Initialize()
 	-- catch up to current units
 	for _,uId in ipairs(spGetAllUnits()) do
 		self:UnitCreated(uId)
-		self:UnitFinished(uId)
 	end
 end
 
@@ -143,10 +142,12 @@ function gadget:UnitCreated(unitId, unitDefId, teamId, builderId)
 	-- for each AI...
 	local unit = Shard:shardify_unit(unitId)
     for _,thisAI in ipairs(AIs) do
-    	ai = thisAI
-    	game = thisAI.game
-		map = thisAI.map
-    	thisAI:UnitCreated(unit)
+    	if Spring.GetUnitTeam(unitId) == thisAI.id then
+	    	ai = thisAI
+	    	game = thisAI.game
+			map = thisAI.map
+	    	thisAI:UnitCreated(unit)
+	    end
 		-- thisAI:UnitCreated(unitId, unitDefId, teamId, builderId)
 	end
 end
