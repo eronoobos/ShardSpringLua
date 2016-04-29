@@ -236,6 +236,10 @@ function gadget:UnitGiven(unitId, unitDefId, teamId, oldTeamId)
 	end
 end
 
+function gadget:FeatureDestroyed(featureID)
+	Shard:unshardify_feature(featureID)
+end
+
 function gadget:GameID(gameID)
 
 end
