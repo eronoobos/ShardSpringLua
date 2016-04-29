@@ -93,9 +93,9 @@ function gadget:Initialize()
 	end
 
 	-- catch up to current units
-	-- for _,uId in ipairs(spGetAllUnits()) do
-	-- 	self:UnitCreated(uId)
-	-- end
+	for _,uId in ipairs(spGetAllUnits()) do
+		self:UnitCreated(uId, Spring.GetUnitDefID(uId), Spring.GetUnitTeam(uId))
+	end
 end
 
 function gadget:GameStart() 
