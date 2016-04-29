@@ -93,9 +93,9 @@ function gadget:Initialize()
 	end
 
 	-- catch up to current units
-	for _,uId in ipairs(spGetAllUnits()) do
-		self:UnitCreated(uId)
-	end
+	-- for _,uId in ipairs(spGetAllUnits()) do
+	-- 	self:UnitCreated(uId)
+	-- end
 end
 
 function gadget:GameStart() 
@@ -146,6 +146,7 @@ function gadget:UnitCreated(unitId, unitDefId, teamId, builderId)
 	    	ai = thisAI
 	    	game = thisAI.game
 			map = thisAI.map
+			thisAI.map.buildsite.UnitCreated(unitId, unitDefId, teamId)
 	    	thisAI:UnitCreated(unit)
 	    end
 		-- thisAI:UnitCreated(unitId, unitDefId, teamId, builderId)
@@ -160,6 +161,7 @@ function gadget:UnitDestroyed(unitId, unitDefId, teamId, attackerId, attackerDef
 			ai = thisAI
 			game = thisAI.game
 			map = thisAI.map
+			thisAI.map.buildsite.UnitDestroyed(unitId, unitDefId, teamId)
 			thisAI:UnitDead(unit)
 			-- thisAI:UnitDestroyed(unitId, unitDefId, teamId, attackerId, attackerDefId, attackerTeamId)
 		end
@@ -221,6 +223,7 @@ function gadget:UnitTaken(unitId, unitDefId, teamId, newTeamId)
 	    	ai = thisAI
 	    	game = thisAI.game
 			map = thisAI.map
+			thisAI.map.buildsite.UnitDestroyed(unitId, unitDefId, teamId)
 			thisAI:UnitTaken(unitId, unitDefId, teamId, newTeamId)
 		end
 	end
@@ -232,6 +235,7 @@ function gadget:UnitGiven(unitId, unitDefId, teamId, oldTeamId)
     	ai = thisAI
     	game = thisAI.game
 		map = thisAI.map
+		thisAI.map.buildsite.UnitCreated(unitId, unitDefId, teamId)
 		thisAI:UnitTaken(unitId, unitDefId, teamId, oldTeamId)
 	end
 end
