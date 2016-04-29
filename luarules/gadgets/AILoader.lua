@@ -1,7 +1,7 @@
 function gadget:GetInfo()
    return {
-      name = "ShardAI",
-      desc = "Shard AI by AF",
+      name = "ShardLua",
+      desc = "Shard by AF for Spring Lua",
       author = "eronoobos, based on gadget by raaar, and original AI by AF",
       date = "April 2016",
       license = "whatever",
@@ -55,7 +55,7 @@ function gadget:Initialize()
 		---- adding AI
 		if (isAI) then
 			local aiInfo = spGetTeamLuaAI(id)
-			if (string.sub(aiInfo,1,7) == "ShardAI") then
+			if (string.sub(aiInfo,1,8) == "ShardLua") then
 				numberOfmFAITeams = numberOfmFAITeams + 1
 				spEcho("Player " .. teamList[i] .. " is " .. aiInfo)
 				-- add AI object
