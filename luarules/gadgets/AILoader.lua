@@ -13,6 +13,16 @@ end
 -- globals
 ShardSpringLua = true -- this is the AI Boot gadget, so we're in Spring Lua
 VFS.Include("luarules/gadgets/ai/preload/globals.lua")
+
+-- fake os object
+os = shard_include("spring_lua/fakeos")
+
+-- missing math function
+function math.mod(number1, number2)
+	return number1 % number2
+end
+math.fmod = math.mod
+
 shard_include("behaviourfactory")
 shard_include("unit")
 shard_include("module")
@@ -26,9 +36,6 @@ local AIs = Shard.AIs
 
 -- fake api object
 api = shard_include("spring_lua/fakeapi")
-
--- fake os object
-os = shard_include("spring_lua/fakeos")
 
 -- localization
 local spEcho = Spring.Echo
