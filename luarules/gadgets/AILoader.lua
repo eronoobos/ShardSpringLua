@@ -27,6 +27,9 @@ local AIs = Shard.AIs
 -- fake api object
 api = shard_include("spring_lua/fakeapi")
 
+-- fake os object
+os = shard_include("spring_lua/fakeos")
+
 -- localization
 local spEcho = Spring.Echo
 local spGetTeamList = Spring.GetTeamList
@@ -245,7 +248,18 @@ function gadget:FeatureDestroyed(featureID)
 end
 
 function gadget:GameID(gameID)
-
+	if Shard then
+		Shard.gameID = gameID
+		local rseed = 0
+		local unpacked = VFS.UnpackU8(gameID, 1, string.len(gameID))
+		for i, part in ipairs(unpacked) do
+			-- local mult = 256 ^ (#unpacked-i)
+			-- rseed = rseed + (part*mult)
+			rseed = rseed + part
+		end
+		-- Spring.Echo("randomseed", rseed)
+		Shard.randomseed = rseed
+	end
 end
 
 --UNSYNCED CODE
