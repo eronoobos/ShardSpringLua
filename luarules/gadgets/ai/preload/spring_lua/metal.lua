@@ -74,8 +74,8 @@ end
 local function CheckHorizontalLineBlob(x, z, tx, id)
 	local area = 0
 	for ix = x, tx do
-		-- if isInBlob[x] and isInBlob[x][z] == id then
-		if spGetMetalAmount(x, z) > 0 then
+		if isInBlob[x] and isInBlob[x][z] == id then
+		-- if spGetMetalAmount(x, z) > 0 then
 			area = area + 1
 		end
 	end
@@ -120,7 +120,8 @@ local function FloodHexBlob(x, z, id)
 	if x > metalmapSizeX or x < 1 or z > metalmapSizeZ or z < 1 then return end
 	if not hexes[id] then hexes[id] = {} end
 	if not hexes[id][x] then hexes[id][x] = {} end
-	if hexes[id][x][z] or spGetMetalAmount(x,z) == 0 then return end
+	-- if hexes[id][x][z] or spGetMetalAmount(x,z) == 0 then return end
+	if hexes[id][x][z] or not isInBlob[x] or isInBlob[x][z] ~= id then return end
 	local blobArea = CheckCircle(x, z, extractorRadiusMetal, id)
 	-- Spring.Echo(x, z, id, blobArea, minSpotArea)
 	if blobArea > minSpotArea then
@@ -181,13 +182,9 @@ local function FloodBufferHexBlob(x, z, id)
 end
 
 local function CirclePack(x, z, id)
-	local sx = x*elmosPerMetal
-	local sz = z*elmosPerMetal
-	-- spotsInBlob[id] = { {x=sx, z=sz, y=spGetGroundHeight(sx,sz)} }
 	spotsInBlob[id] = {}
-	local okay = FloodBufferHexBlob(x, z, id)
+	FloodBufferHexBlob(x, z, id)
 	hexes[id] = nil
-	if not okay then spotsInBlob[id] = {} end
 end
 
 local function GetSpots()
@@ -199,7 +196,7 @@ local function GetSpots()
 		end
 	end
 	Spring.Echo(#blobs, "blobs")
-	isInBlob = {}
+	-- isInBlob = {}
 	local spots = {}
 	for id = 1, #blobs do
 		local blob = blobs[id]
