@@ -132,7 +132,9 @@ function gadget:GameFrame(n)
         for _,uId in ipairs(spGetAllUnits()) do
         	if (spGetUnitTeam(uId) == thisAI.id) then
         		thisAI.ownUnitIds[uId] = true
+        		thisAI.friendlyUnitIds[uId] = true
         	elseif (thisAI.alliedTeamIds[spGetUnitTeam(uId)] or spGetUnitTeam(uId) == thisAI.id) then
+        		thisAI.alliedUnitIds[uId] = true
         		thisAI.friendlyUnitIds[uId] = true
         	else
         		thisAI.enemyUnitIds[uId] = true
