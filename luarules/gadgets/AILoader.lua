@@ -158,7 +158,6 @@ function gadget:UnitCreated(unitId, unitDefId, teamId, builderId)
 	    	ai = thisAI
 	    	game = thisAI.game
 			map = thisAI.map
-			thisAI.map.buildsite.UnitCreated(unitId, unitDefId, teamId)
 	    	thisAI:UnitCreated(unit)
 	    end
 		-- thisAI:UnitCreated(unitId, unitDefId, teamId, builderId)
@@ -173,7 +172,6 @@ function gadget:UnitDestroyed(unitId, unitDefId, teamId, attackerId, attackerDef
 			ai = thisAI
 			game = thisAI.game
 			map = thisAI.map
-			thisAI.map.buildsite.UnitDestroyed(unitId, unitDefId, teamId)
 			thisAI:UnitDead(unit)
 			-- thisAI:UnitDestroyed(unitId, unitDefId, teamId, attackerId, attackerDefId, attackerTeamId)
 		end
@@ -228,27 +226,28 @@ function gadget:UnitFinished(unitId, unitDefId, teamId)
 end
 
 function gadget:UnitTaken(unitId, unitDefId, teamId, newTeamId) 
-	-- for each AI...
 	local unit = Shard:shardify_unit(unitId)
 	if unit then
 	    for _,thisAI in ipairs(AIs) do
 	    	ai = thisAI
 	    	game = thisAI.game
 			map = thisAI.map
-			thisAI.map.buildsite.UnitDestroyed(unitId, unitDefId, teamId)
-			thisAI:UnitTaken(unitId, unitDefId, teamId, newTeamId)
+			-- thisAI:UnitTaken(unitId, unitDefId, teamId, newTeamId)
+			-- thisAI:UnitDead(unit)
 		end
 	end
 end
 
 function gadget:UnitGiven(unitId, unitDefId, teamId, oldTeamId) 
-	-- for each AI...
-    for _,thisAI in ipairs(AIs) do
-    	ai = thisAI
-    	game = thisAI.game
-		map = thisAI.map
-		thisAI.map.buildsite.UnitCreated(unitId, unitDefId, teamId)
-		thisAI:UnitTaken(unitId, unitDefId, teamId, oldTeamId)
+	local unit = Shard:shardify_unit(unitId)
+	if unit then
+	    for _,thisAI in ipairs(AIs) do
+	    	ai = thisAI
+	    	game = thisAI.game
+			map = thisAI.map
+			-- thisAI:UnitCreated(unitId, unitDefId, teamId, oldTeamId)
+			thisAI:UnitCreated(unit)
+		end
 	end
 end
 
