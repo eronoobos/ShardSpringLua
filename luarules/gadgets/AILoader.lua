@@ -127,6 +127,7 @@ function gadget:GameFrame(n)
         -- update sets of unit ids : own, friendlies, enemies
 		thisAI.ownUnitIds = {}
         thisAI.friendlyUnitIds = {}
+        thisAI.alliedUnitIds = {}
         thisAI.enemyUnitIds = {}
 
         for _,uId in ipairs(spGetAllUnits()) do
