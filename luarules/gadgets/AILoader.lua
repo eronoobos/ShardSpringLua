@@ -48,6 +48,13 @@ local spGetTeamUnits = Spring.GetTeamUnits
 local spGetAllUnits = Spring.GetAllUnits
 local spGetUnitTeam = Spring.GetUnitTeam
 
+local function prepareTheAI(thisAI)
+	if not thisAI.modules then thisAI:Init() end
+	ai = thisAI
+	game = thisAI.game
+	map = thisAI.map
+end
+
 --SYNCED CODE
 if (gadgetHandler:IsSyncedCode()) then
 
@@ -72,7 +79,7 @@ function gadget:Initialize()
 				thisAI = VFS.Include("LuaRules/Gadgets/ai/AI.lua")
 				thisAI.id = id
 				thisAI.allyId = allyId
-				thisAI:Init()
+				-- thisAI:Init()
 				AIs[#AIs+1] = thisAI
 				Shard.AIsByTeamID[id] = thisAI
 			else
@@ -100,11 +107,10 @@ function gadget:Initialize()
 	-- catch up to started game
 	if Spring.GetGameFrame() > 1 then
 		self:GameStart()
-	end
-
-	-- catch up to current units
-	for _,uId in ipairs(spGetAllUnits()) do
-		self:UnitCreated(uId, Spring.GetUnitDefID(uId), Spring.GetUnitTeam(uId))
+		-- catch up to current units
+		for _,uId in ipairs(spGetAllUnits()) do
+			self:UnitCreated(uId, Spring.GetUnitDefID(uId), Spring.GetUnitTeam(uId))
+		end
 	end
 end
 
@@ -115,6 +121,7 @@ function gadget:GameStart()
 		thisAI.side = side
 		local x,y,z = spGetTeamStartPosition(thisAI.id)
 		thisAI.startPos = {x,y,z}
+		if not thisAI.modules then thisAI:Init() end
     end
 end
 
@@ -143,9 +150,7 @@ function gadget:GameFrame(n)
         end 
 	
 		-- run AI game frame update handlers
-		ai = thisAI
-		game = thisAI.game
-		map = thisAI.map
+		prepareTheAI(thisAI)
 		thisAI:Update()
     end
 end
@@ -156,9 +161,7 @@ function gadget:UnitCreated(unitId, unitDefId, teamId, builderId)
 	local unit = Shard:shardify_unit(unitId)
     for _,thisAI in ipairs(AIs) do
     	if Spring.GetUnitTeam(unitId) == thisAI.id then
-	    	ai = thisAI
-	    	game = thisAI.game
-			map = thisAI.map
+	    	prepareTheAI(thisAI)
 	    	thisAI:UnitCreated(unit)
 	    end
 		-- thisAI:UnitCreated(unitId, unitDefId, teamId, builderId)
@@ -170,9 +173,7 @@ function gadget:UnitDestroyed(unitId, unitDefId, teamId, attackerId, attackerDef
 	local unit = Shard:shardify_unit(unitId)
 	if unit then
 		for _,thisAI in ipairs(AIs) do
-			ai = thisAI
-			game = thisAI.game
-			map = thisAI.map
+			prepareTheAI(thisAI)
 			thisAI:UnitDead(unit)
 			-- thisAI:UnitDestroyed(unitId, unitDefId, teamId, attackerId, attackerDefId, attackerTeamId)
 		end
@@ -188,9 +189,7 @@ function gadget:UnitDamaged(unitId, unitDefId, unitTeamId, damage, paralyzer, we
 		local attackerUnit = Shard:shardify_unit(attackerId)
 		local damageObj = Shard:shardify_damage(damage, weaponDefId, paralyzer)
 	    for _,thisAI in ipairs(AIs) do
-	    	ai = thisAI
-	    	game = thisAI.game
-			map = thisAI.map
+	    	prepareTheAI(thisAI)
 	    	thisAI:UnitDamaged(unit, attackerUnit, damageObj)
 			-- thisAI:UnitDamaged(unitId, unitDefId, unitTeamId, attackerId, attackerDefId, attackerTeamId)
 		end	
@@ -202,9 +201,7 @@ function gadget:UnitIdle(unitId, unitDefId, teamId)
 	local unit = Shard:shardify_unit(unitId)
 	if unit then
 	    for _,thisAI in ipairs(AIs) do
-	    	ai = thisAI
-	    	game = thisAI.game
-			map = thisAI.map
+	    	prepareTheAI(thisAI)
 	    	thisAI:UnitIdle(unit)
 			-- thisAI:UnitIdle(unitId, unitDefId, teamId)
 		end
@@ -218,9 +215,7 @@ function gadget:UnitFinished(unitId, unitDefId, teamId)
 	if unit then
 	    for _,thisAI in ipairs(AIs) do
 			-- thisAI:UnitFinished(unitId, unitDefId, teamId)
-			ai = thisAI
-			game = thisAI.game
-			map = thisAI.map
+			prepareTheAI(thisAI)
 			thisAI:UnitBuilt(unit)
 		end
 	end
@@ -230,9 +225,7 @@ function gadget:UnitTaken(unitId, unitDefId, teamId, newTeamId)
 	local unit = Shard:shardify_unit(unitId)
 	if unit then
 	    for _,thisAI in ipairs(AIs) do
-	    	ai = thisAI
-	    	game = thisAI.game
-			map = thisAI.map
+	    	prepareTheAI(thisAI)
 			-- thisAI:UnitTaken(unitId, unitDefId, teamId, newTeamId)
 			-- thisAI:UnitDead(unit)
 		end
@@ -243,9 +236,7 @@ function gadget:UnitGiven(unitId, unitDefId, teamId, oldTeamId)
 	local unit = Shard:shardify_unit(unitId)
 	if unit then
 	    for _,thisAI in ipairs(AIs) do
-	    	ai = thisAI
-	    	game = thisAI.game
-			map = thisAI.map
+	    	prepareTheAI(thisAI)
 			-- thisAI:UnitCreated(unitId, unitDefId, teamId, oldTeamId)
 			thisAI:UnitCreated(unit)
 		end
