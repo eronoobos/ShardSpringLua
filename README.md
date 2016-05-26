@@ -31,4 +31,4 @@ return {
 }
 ```
 
-The second dependency line, `"Balanced Annihilation Shard LuaAI linked $VERSION"`, is the game's Shard configuration archived in a Spring mod. See [Balanced-Annihilation-Shard-LuaAI](https://github.com/eronoobos/Balanced-Annihilation-Shard-LuaAI/tree/master/luarules/gadgets/ai) for an example.
+The second dependency line, `"Balanced Annihilation Shard LuaAI $VERSION"`, is the game's Shard configuration archived in a Spring mod. See [Balanced-Annihilation-Shard-LuaAI](https://github.com/eronoobos/Balanced-Annihilation-Shard-LuaAI) for an example.
