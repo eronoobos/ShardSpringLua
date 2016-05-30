@@ -1,6 +1,0 @@
-idea for better metal spot finder
-
-1: flood fill at actual metal map resolution
-2: count up area and calculate centroid of each continuity
-3: if area is below the extraction area radius (plus a bit of acceptable loss), the centroid is a single metal spot
-4: otherwise pack hexagonally with circles with the extraction radius, starting from the centroid, and discounting any with too little metal area within them (say, less than 25%)
