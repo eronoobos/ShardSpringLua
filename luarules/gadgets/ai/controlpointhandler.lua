@@ -39,3 +39,7 @@ function ControlPointHandler:ClosestUncapturedPoint(position)
 	end
 	return pos
 end
+
+function ControlPointHandler:ArePoints()
+	return #self.points > 0
+end

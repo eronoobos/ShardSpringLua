@@ -14,7 +14,19 @@ end
 
 CapturerBehaviour = class(Behaviour)
 
+local function RandomAway(pos, dist, angle)
+	angle = angle or math.random() * math.pi * 2
+	local away = api.Position()
+	away.x = pos.x + dist * math.cos(angle)
+	away.z = pos.z - dist * math.sin(angle)
+	away.y = pos.y + 0
+	return away
+end
+
 function CapturerBehaviour:Init()
+	self.arePoints = self.ai.controlpointhandler:ArePoints()
+	self.maxDist = math.ceil( self.ai.controlpointhandler:CaptureDistance() * 0.9 )
+	self.minDist = math.ceil( self.maxDist / 3 )
 end
 
 function CapturerBehaviour:UnitIdle()
@@ -24,7 +36,11 @@ function CapturerBehaviour:UnitIdle()
 end
 
 function CapturerBehaviour:Priority()
-	return 40
+	if self.arePoints then
+		return 40
+	else
+		return 0
+	end
 end
 
 function CapturerBehaviour:Activate()
@@ -34,9 +50,10 @@ end
 
 function CapturerBehaviour:GoForth()
 	local upos = self.unit:Internal():GetPosition()
-	local point = self.ai.controlpointbehaviour:ClosestUncapturedPoint(upos)
+	local point = self.ai.controlpointhandler:ClosestUncapturedPoint(upos)
 	if point ~= self.currentPoint then
-		self.unit:Internal():Move(point)
+		local movePos = RandomAway( point, math.random(self.minDist,self.maxDist) )
+		self.unit:Internal():Move(movePos)
 		self.currentPoint = point
 	end
 end
