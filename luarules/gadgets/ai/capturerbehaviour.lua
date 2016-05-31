@@ -25,7 +25,7 @@ end
 
 function CapturerBehaviour:Init()
 	self.arePoints = self.ai.controlpointhandler:ArePoints()
-	self.maxDist = math.ceil( self.ai.controlpointhandler:CaptureDistance() * 0.9 )
+	self.maxDist = math.ceil( self.ai.controlpointhandler:CaptureRadius() * 0.9 )
 	self.minDist = math.ceil( self.maxDist / 3 )
 end
 
