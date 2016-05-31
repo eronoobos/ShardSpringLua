@@ -20,7 +20,7 @@ function ControlPointHandler:Init()
 	if ShardSpringLua then
 		self.points = Script.LuaRules.ControlPoints()
 	end
-	self.team = self.ai.id
+	self.ally = self.ai.allyId
 end
 
 function ControlPointHandler:ClosestUncapturedPoint(position)
@@ -28,8 +28,8 @@ function ControlPointHandler:ClosestUncapturedPoint(position)
 	local bestDistance
 	for i = 1, #self.points do
 		local point = self.points[i]
-		local pointTeam = Script.LuaRules.ControlPointTeam(point.x, point.y, point.z)
-		if pointTeam ~= self.team then
+		local pointAlly = point.owner
+		if pointAlly ~= self.ally then
 			local dist = distance(position, point)
 			if not bestDistance or dist < bestDistance then
 				bestDistance = dist
