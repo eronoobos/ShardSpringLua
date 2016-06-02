@@ -27,10 +27,8 @@ end
 
 function CapturerBehaviour:Init()
 	self.arePoints = self.ai.controlpointhandler:ArePoints()
-	if self.arePoints then
-		self.maxDist = math.ceil( self.ai.controlpointhandler:CaptureRadius() * 0.9 )
-		self.minDist = math.ceil( self.maxDist / 3 )
-	end
+	self.maxDist = math.ceil( self.ai.controlpointhandler:CaptureRadius() * 0.9 )
+	self.minDist = math.ceil( self.maxDist / 3 )
 end
 
 function CapturerBehaviour:UnitIdle(unit)
@@ -66,7 +64,7 @@ end
 function CapturerBehaviour:GoForth()
 	local upos = self.unit:Internal():GetPosition()
 	local point = self.ai.controlpointhandler:ClosestUncapturedPoint(upos)
-	if point ~= self.currentPoint then
+	if point and point ~= self.currentPoint then
 		local movePos = RandomAway( point, math.random(self.minDist,self.maxDist) )
 		self.unit:Internal():Move(movePos)
 		self.currentPoint = point
