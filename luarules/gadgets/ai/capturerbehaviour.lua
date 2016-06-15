@@ -1,5 +1,5 @@
 function IsCapturer(unit)
-	local noncapturelist = self.game:NonCapturingUnits()
+	local noncapturelist = game:NonCapturingUnits()
 	for i = 1, #noncapturelist do
 		local name = noncapturelist[i]
 		if name == unit:Internal():Name() then
@@ -21,17 +21,9 @@ local function RandomAway(pos, dist, angle)
 end
 
 function CapturerBehaviour:Init()
-<<<<<<< HEAD
 	self.arePoints = self.map:AreControlPoints()
-	if self.arePoints then
-		self.maxDist = math.ceil( self.game:CaptureRadius() * 0.9 )
-		self.minDist = math.ceil( self.maxDist / 3 )
-	end
-=======
-	self.arePoints = self.ai.controlpointhandler:ArePoints()
-	self.maxDist = math.ceil( self.ai.controlpointhandler:CaptureRadius() * 0.9 )
+	self.maxDist = math.ceil( self.game:CaptureRadius() * 0.9 )
 	self.minDist = math.ceil( self.maxDist / 3 )
->>>>>>> eb774041c40cba9e854bf4eb1102d5adf1d62987
 end
 
 function CapturerBehaviour:UnitIdle(unit)
