@@ -37,6 +37,9 @@ local AIs = Shard.AIs
 -- fake api object
 api = shard_include("spring_lua/fakeapi")
 
+-- AI class
+shard_include("ai")
+
 -- localization
 local spEcho = Spring.Echo
 local spGetTeamList = Spring.GetTeamList
@@ -76,7 +79,7 @@ function gadget:Initialize()
 				numberOfmFAITeams = numberOfmFAITeams + 1
 				spEcho("Player " .. teamList[i] .. " is " .. aiInfo)
 				-- add AI object
-				thisAI = VFS.Include("LuaRules/Gadgets/ai/AI.lua")
+				thisAI = AI()
 				thisAI.id = id
 				thisAI.allyId = allyId
 				-- thisAI:Init()
@@ -265,9 +268,6 @@ end
 
 --UNSYNCED CODE
 else
-
-
-
 
 
 end
