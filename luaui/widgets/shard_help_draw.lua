@@ -181,6 +181,17 @@ local function colorByTable(color)
 	glColor(color[1], color[2], color[3], color[4])
 end
 
+local function GetShapes(teamID, channel)
+	channel = channel or 1
+	if not aiTeams[teamID] then
+		aiTeams[teamID] = {}
+	end
+	if not aiTeams[teamID][channel] then
+		aiTeams[teamID][channel] = {}
+	end
+	return aiTeams[teamID][channel]
+end
+
 local function DrawRectangles(shapes)
 	glDepthTest(false)
 	glPushMatrix()
@@ -277,8 +288,51 @@ local function DrawLabels(shapes)
 	-- glEndText()
 end
 
+local function DrawInterface()
+	local viewX, viewY, posX, posY = spGetViewGeometry()
+	local centerX = mCeil(viewX/2)
+	local centerY = mCeil(viewY/2)
+	local quarterX = mCeil(viewX * 0.25)
+	local threeQuartersY = mCeil(viewY * 0.75)
+	myMonoFont:Begin()
+	myMonoFont:SetTextColor(1, 1, 1, 1)
+	local teamParenthesis = 'press t to change'
+	local channelParenthesis = 'press c to change'
+	if lastKey == 99 then -- c
+		channelParenthesis = 'press 1 through 9 to change'
+		local y = threeQuartersY
+		for channel, shapes in pairs(aiTeams[selectedTeamID]) do
+			myMonoFont:Print('Channel ' .. channel .. " has " .. #shapes .. " shapes", quarterX, y, 16, "do")
+			y = y - 24
+		end
+	elseif lastKey == 116 then -- t
+		teamParenthesis = 'press 0 through 9 to change'
+		local y = threeQuartersY
+		for teamID, channels in pairs(aiTeams) do
+			local chnCnt = 0
+			local shpCnt = 0
+			for channel, shapes in pairs(channels) do
+				chnCnt = chnCnt + 1
+				shpCnt = shpCnt + #shapes
+			end
+			myMonoFont:Print('Team ' .. teamID .. " has " .. chnCnt .. " channels and " .. shpCnt .. " shapes", quarterX, y, 16, "do")
+			y = y - 24
+		end
+	end
+	local shapes = GetShapes(selectedTeamID, selectedChannel)
+	myMonoFont:Print('Team    ' .. selectedTeamID .. ' (' .. teamParenthesis .. ')', quarterX, 32, 16, "do")
+	myMonoFont:Print('Channel ' .. selectedChannel .. ' (' .. channelParenthesis .. ')', quarterX, 56, 16, "do")
+	myMonoFont:Print(#shapes .. ' Shapes in current Channel of current Team, of ' .. shapeCount .. ' total shapes', quarterX, 80, 16, "do")
+	myMonoFont:End()
+end
+
+local function UpdateInterface()
+	needUpdateInterface = true
+end
+
 local function UpdateLabels()
 	needUpdateLabels = true
+	UpdateInterface()
 end
 
 local function UpdateShapesByType(shapeType)
@@ -297,17 +351,6 @@ local function UpdateShapesByType(shapeType)
 		needUpdatePoints = true
 	end
 	UpdateLabels()
-end
-
-local function GetShapes(teamID, channel)
-	channel = channel or 1
-	if not aiTeams[teamID] then
-		aiTeams[teamID] = {}
-	end
-	if not aiTeams[teamID][channel] then
-		aiTeams[teamID][channel] = {}
-	end
-	return aiTeams[teamID][channel]
 end
 
 local function GetShapeID()
@@ -563,6 +606,7 @@ function widget:Initialize()
 	BindCommand("ShardDrawClearShapes", ClearShapes)
 	BindCommand("ShardDrawDisplay", DisplayOnOff)
 	myFont = glLoadFont('LuaUI/Fonts/FreeSansBold.otf', 16, 4, 5)
+	myMonoFont = glLoadFont('LuaUI/Fonts/DejaVuSansMono-Bold.ttf', 16, 4, 5)
 end
 
 function widget:GameFrame(frameNum)
@@ -595,7 +639,9 @@ end
 
 function widget:KeyPress(key, mods, isRepeat)
 	-- Spring.Echo(key, mods, isRepeat)
-	if shapeCount == 0 then return end
+	if shapeCount == 0 or not displayOnOff then
+		return
+	end
 	if key > 47 and key < 58 then
 		local number  = 0
 		if key > 48 then
@@ -610,20 +656,20 @@ function widget:KeyPress(key, mods, isRepeat)
 		end
 	end
 	lastKey = key
+	UpdateInterface()
 end
 
 function widget:Update()
+	if shapeCount == 0 or not displayOnOff then
+		return
+	end
 	local camState = spGetCameraState()
 	if not CameraStatesMatch(camState, lastCamState) then
 		UpdateLabels()
 	end
-	lastCamState = camState
 	selectedTeamID = selectedTeamID or lastTeamID
 	selectedChannel = selectedChannel or lastChannel
-end
-
-function widget:DrawWorld()
-	if shapeCount == 0 or not displayOnOff or not selectedTeamID or not selectedChannel then
+	if not selectedTeamID or not selectedChannel then
 		return
 	end
 	local shapes = GetShapes(selectedTeamID, selectedChannel)
@@ -643,6 +689,21 @@ function widget:DrawWorld()
 		pointDisplayList = glCreateList(DrawPoints, shapes)
 		needUpdatePoints = false
 	end
+	if needUpdateLabels then
+		labelDisplayList = glCreateList(DrawLabels, shapes)
+		needUpdateLabels = false
+	end
+	if needUpdateInterface then
+		interfaceDisplayList = glCreateList(DrawInterface)
+		needUpdateInterface = false
+	end
+	lastCamState = camState
+end
+
+function widget:DrawWorld()
+	if shapeCount == 0 or not displayOnOff or not selectedTeamID or not selectedChannel then
+		return
+	end
 	glCallList(rectangleDisplayList)
 	glCallList(circleDisplayList)
 	glCallList(lineDisplayList)
@@ -653,25 +714,6 @@ function widget:DrawScreen()
 	if shapeCount == 0 or not displayOnOff or not selectedTeamID or not selectedChannel then
 		return
 	end
-	local shapes = GetShapes(selectedTeamID, selectedChannel)
-	local viewX, viewY, posX, posY = spGetViewGeometry()
-	local centerX = mCeil(viewX/2)
-	myFont:Begin()
-	myFont:SetTextColor(1, 1, 1, 1)
-	local teamParenthesis = 'press t to change'
-	local channelParenthesis = 'press c to change'
-	if lastKey == 99 then -- c
-		channelParenthesis = 'press 1 through 9 to change'
-	elseif lastKey == 116 then -- t
-		teamParenthesis = 'press 0 through 9 to change'
-	end
-	myFont:Print('Team ' .. selectedTeamID .. ' (' .. teamParenthesis .. ')', centerX, 32, 16, "do")
-	myFont:Print('Channel ' .. selectedChannel .. ' (' .. channelParenthesis .. ')', centerX, 56, 16, "do")
-	myFont:Print(#shapes .. ' Shapes in current Channel of current Team, of ' .. shapeCount .. ' total shapes', centerX, 80, 16, "cdo")
-	myFont:End()
-	if needUpdateLabels then
-		labelDisplayList = glCreateList(DrawLabels, shapes)
-		needUpdateLabels = false
-	end
 	glCallList(labelDisplayList)
+	glCallList(interfaceDisplayList)
 end
