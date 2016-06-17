@@ -29,6 +29,10 @@ local labelDisplayList = 0
 
 local tRemove = table.remove
 local mCeil = math.ceil
+local mSqrt = math.sqrt
+local mCos = math.cos
+local mSin = math.sin
+local twicePi = math.pi * 2
 
 local spIsSphereInView = Spring.IsSphereInView
 local spGetGroundHeight = Spring.GetGroundHeight
@@ -45,21 +49,23 @@ local glDeleteList = gl.DeleteList
 local glColor = gl.Color
 local glBeginEnd = gl.BeginEnd
 local glVertex = gl.Vertex
-local glLoadFont = gl.LoadFont
 local glPushMatrix = gl.PushMatrix
 local glPopMatrix = gl.PopMatrix
 local glDepthTest = gl.DepthTest
 local glLineWidth = gl.LineWidth
-local glDrawGroundCircle = gl.DrawGroundCircle
-local glTranslate = gl.Translate
-local glBillboard = gl.Billboard
-local glText = gl.Text
-local glBeginText = gl.BeginText
-local glEndText = gl.EndText
+local glPointSize = gl.PointSize
+-- local glTranslate = gl.Translate
+-- local glBillboard = gl.Billboard
+-- local glText = gl.Text
+-- local glBeginText = gl.BeginText
+-- local glEndText = gl.EndText
 local glLoadFont = gl.LoadFont
 
 local GL_TRIANGLE_STRIP = GL.TRIANGLE_STRIP
+local GL_TRIANGLE_FAN = GL.TRIANGLE_FAN
 local GL_LINE_STRIP = GL.LINE_STRIP
+local GL_LINE_LOOP = GL.LINE_LOOP
+local GL_POINTS = GL.POINTS
 
 local function justWords(str)
   local words = {}
@@ -92,15 +98,61 @@ end
 function widget:KeyPress(key, mods, isRepeat)
 end
 
+-- using GL_POINT
+local function doPoint(x, y, z)
+	glVertex(x, y, z)
+end
+
+-- using GL_LINE_STRIP
 local function doLine(x1, y1, z1, x2, y2, z2)
     gl.Vertex(x1, y1, z1)
     gl.Vertex(x2, y2, z2)
 end
 
+-- using GL_TRIANGLE_STRIP
 local function doTriangle(x1, y1, z1, x2, y2, z2, x3, y3, z3)
 	glVertex(x1, y1, z1)
     glVertex(x2, y2, z2)
     glVertex(x3, y3, z3)
+end
+
+-- using GL_TRIANGLE_FAN
+local function doCircle(x, y, z, radius, sides)
+	local sideAngle = twicePi / sides
+	glVertex(x, y, z)
+	for i = 1, sides+1 do
+		local cx = x + (radius * mCos(i * sideAngle))
+		local cz = z + (radius * mSin(i * sideAngle))
+		glVertex(cx, y, cz)
+	end
+end
+
+-- using GL_LINE_LOOP
+local function doEmptyCircle(x, y, z, radius, sides)
+	local sideAngle = twicePi / sides
+	for i = 1, sides do
+		local cx = x + (radius * mCos(i * sideAngle))
+		local cz = z + (radius * mSin(i * sideAngle))
+		glVertex(cx, y, cz)
+	end
+end
+
+-- using GL_TRIANGLE_STRIP
+local function doRectangle(x1, z1, x2, z2, y)
+	glVertex(x1, y, z1)
+	glVertex(x2, y, z1)
+	glVertex(x2, y, z2)
+	glVertex(x1, y, z1)
+	glVertex(x1, y, z2)
+	glVertex(x2, y, z2)
+end
+
+-- using GL_LINE_LOOP
+local function doEmptyRectangle(x1, z1, x2, z2, y)
+	glVertex(x1, y, z1)
+	glVertex(x2, y, z1)
+	glVertex(x2, y, z2)
+	glVertex(x1, y, z2)
 end
 
 local function CameraStatesMatch(stateA, stateB)
@@ -119,14 +171,19 @@ end
 local function DrawRectangles(shapes)
 	glDepthTest(false)
 	glPushMatrix()
+	glLineWidth(2)
 	for i = 1, #shapes do
 		local shape = shapes[i]
 		if shape.type == "rectangle" then
 			colorByTable(shape.color)
-			glBeginEnd(GL_TRIANGLE_STRIP, doTriangle, shape.x1, shape.y, shape.z1, shape.x2, shape.y, shape.z1, shape.x2, shape.y, shape.z2)
-			glBeginEnd(GL_TRIANGLE_STRIP, doTriangle, shape.x1, shape.y, shape.z1, shape.x1, shape.y, shape.z2, shape.x2, shape.y, shape.z2)
+			if shape.filled then
+				glBeginEnd(GL_TRIANGLE_STRIP, doRectangle, shape.x1, shape.z1, shape.x2, shape.z2, shape.y)
+			else
+				glBeginEnd(GL_LINE_LOOP, doEmptyRectangle, shape.x1, shape.z1, shape.x2, shape.z2, shape.y)
+			end
 		end
 	end
+	glLineWidth(1)
 	glColor(1, 1, 1, 0.5)
 	glPopMatrix()
 end
@@ -134,13 +191,20 @@ end
 local function DrawCircles(shapes)
 	glDepthTest(false)
 	glPushMatrix()
+	glLineWidth(2)
 	for i = 1, #shapes do
 		local shape = shapes[i]
 		if shape.type == "circle" then
 			colorByTable(shape.color)
-			glDrawGroundCircle(shape.x, shape.y, shape.z, shape.radius, mCeil(shape.radius/12.5))
+			local sides = mCeil(mSqrt(shape.radius))
+			if shape.filled then
+				glBeginEnd(GL_TRIANGLE_FAN, doCircle, shape.x, shape.y, shape.z, shape.radius, sides)
+			else
+				glBeginEnd(GL_LINE_LOOP, doEmptyCircle, shape.x, shape.y, shape.z, shape.radius, sides)
+			end
 		end
 	end
+	glLineWidth(1)
 	glColor(1, 1, 1, 0.5)
 	glDepthTest(true)
 	glPopMatrix()
@@ -167,10 +231,12 @@ local function DrawPoints(shapes)
 	glDepthTest(false)
 	glPushMatrix()
 	glLineWidth(3)
+	glPointSize(9)
 	for i = 1, #shapes do
 		local shape = shapes[i]
 		if shape.type == "point" then
 			colorByTable(shape.color)
+			glBeginEnd(GL_POINTS, doPoint, shape.x, shape.y, shape.z)
 			glBeginEnd(GL_LINE_STRIP, doLine, shape.x, shape.y, shape.z, shape.x, shape.y+64, shape.z)
 		end
 	end
