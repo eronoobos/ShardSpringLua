@@ -17,7 +17,7 @@ local commandBindings = {}
 local shapeIDCounter = 0
 local lastCamState
 local selectedTeamID
-local selectedChannel = 1
+local selectedChannel
 local lastTeamID
 local lastChannel
 local needUpdateRectangles, needUpdateCircles, needUpdateLines, needUpdatePoints, needUpdateLabels
