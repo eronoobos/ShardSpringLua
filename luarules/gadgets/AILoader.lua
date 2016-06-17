@@ -323,6 +323,12 @@ local function sdClearShapes(_, teamID, channel)
 	end
 end
 
+local function sdDisplay(_, onOff)
+	if (Script.LuaUI('ShardDrawDisplay')) then
+		Script.LuaUI.ShardDrawDisplay(onOff)
+	end
+end
+
 function gadget:Initialize()
 	gadgetHandler:AddSyncAction('ShardDrawAddRectangle', sdAddRectangle)
 	gadgetHandler:AddSyncAction('ShardDrawEraseRectangle', sdEraseRectangle)
@@ -333,6 +339,7 @@ function gadget:Initialize()
 	gadgetHandler:AddSyncAction('ShardDrawAddPoint', sdAddPoint)
 	gadgetHandler:AddSyncAction('ShardDrawErasePoint', sdErasePoint)
 	gadgetHandler:AddSyncAction('ShardDrawClearShapes', sdClearShapes)
+	gadgetHandler:AddSyncAction('ShardDrawDisplay', sdDisplay)
 end
 
 end

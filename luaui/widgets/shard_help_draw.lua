@@ -20,6 +20,9 @@ local selectedChannel = 1
 local lastTeamID
 local lastChannel
 local needUpdateRectangles, needUpdateCircles, needUpdateLines, needUpdatePoints, needUpdateLabels
+local displayOnOff = true
+local shapeCount = 0
+local lastKey
 
 local rectangleDisplayList = 0
 local circleDisplayList = 0
@@ -42,6 +45,7 @@ local spGetCameraState = Spring.GetCameraState
 local spTraceScreenRay = Spring.TraceScreenRay
 local spPos2BuildPos = Spring.Pos2BuildPos
 local spEcho = Spring.Echo
+local spGetViewGeometry = Spring.GetViewGeometry
 
 local glCreateList = gl.CreateList
 local glCallList = gl.CallList
@@ -90,12 +94,6 @@ local function split(pString, pPattern)
       table.insert(Table, cap)
    end
    return Table
-end
-
-function widget:GameFrame(frameNum)
-end
-
-function widget:KeyPress(key, mods, isRepeat)
 end
 
 -- using GL_POINT
@@ -272,6 +270,7 @@ local function UpdateShapesByType(shapeType)
 	if not shapeType then
 		needUpdateRectangles = true
 		needUpdateCircles = true
+		needUpdateLines = true
 		needUpdatePoints = true
 	elseif shapeType == "rectangle" then
 		needUpdateRectangles = true
@@ -319,7 +318,7 @@ local function AddShape(shape, teamID, channel)
 	shapes[#shapes+1] = shape
 	teamChannelByID[shape.id] = {teamID = teamID, channel = channel}
 	UpdateShapesByType(shape.type)
-	Spring.SendLuaRulesMsg("ShardDrawShapeID " .. shape.id)
+	shapeCount = shapeCount + 1
 	return shape.id
 end
 
@@ -411,6 +410,7 @@ local function EraseShape(id, address)
 		local foundShape = tRemove(shapes, address)
 		UpdateShapesByType(foundShape.type)
 		found = true
+		shapeCount = shapeCount - 1
 	end
 	return found
 end
@@ -476,6 +476,10 @@ local function ClearShapes(teamID, channel)
 	UpdateShapesByType()
 end
 
+local function DisplayOnOff(onOff)
+	displayOnOff = onOff
+end
+
 function widget:Initialize()
 	widgetHandler:RegisterGlobal("ShardDrawAddRectangle", AddRectangle)
 	widgetHandler:RegisterGlobal("ShardDrawAddCircle", AddCircle)
@@ -487,7 +491,30 @@ function widget:Initialize()
 	widgetHandler:RegisterGlobal("ShardDrawEraseLine", EraseLine)
 	widgetHandler:RegisterGlobal("ShardDrawErasePoint", ErasePoint)
 	widgetHandler:RegisterGlobal("ShardDrawClearShapes", ClearShapes)
+	widgetHandler:RegisterGlobal("ShardDrawDisplay", DisplayOnOff)
 	myFont = glLoadFont('LuaUI/Fonts/FreeSansBold.otf', 16, 4, 5)
+end
+
+function widget:GameFrame(frameNum)
+end
+
+function widget:KeyPress(key, mods, isRepeat)
+	-- Spring.Echo(key, mods, isRepeat)
+	if shapeCount == 0 then return end
+	if key > 47 and key < 58 then
+		local number  = 0
+		if key > 48 then
+			number = key - 48
+		end
+		if lastKey == 99 and number > 0 then -- c
+			selectedChannel = number
+			UpdateShapesByType()
+		elseif lastKey == 116 then -- t
+			selectedTeamID = number
+			UpdateShapesByType()
+		end
+	end
+	lastKey = key
 end
 
 function widget:Update()
@@ -501,7 +528,7 @@ function widget:Update()
 end
 
 function widget:DrawWorld()
-	if not selectedTeamID or not selectedChannel then
+	if shapeCount == 0 or not displayOnOff or not selectedTeamID or not selectedChannel then
 		return
 	end
 	local shapes = GetShapes(selectedTeamID, selectedChannel)
@@ -528,11 +555,27 @@ function widget:DrawWorld()
 end
 
 function widget:DrawScreen()
-	if not selectedTeamID or not selectedChannel then
+	if shapeCount == 0 or not displayOnOff or not selectedTeamID or not selectedChannel then
 		return
 	end
+	local shapes = GetShapes(selectedTeamID, selectedChannel)
+	local viewX, viewY, posX, posY = spGetViewGeometry()
+	local centerX = mCeil(viewX/2)
+	myFont:Begin()
+	myFont:SetTextColor(1, 1, 1, 1)
+	local teamParenthesis = 'press t to change'
+	local channelParenthesis = 'press c to change'
+	if lastKey == 99 then -- c
+		channelParenthesis = 'press 1 through 9 to change'
+	elseif lastKey == 116 then -- t
+		teamParenthesis = 'press 0 through 9 to change'
+	end
+	myFont:Print('Team ' .. selectedTeamID .. ' (' .. teamParenthesis .. ')', centerX, 32, 16, "do")
+	myFont:Print('Channel ' .. selectedChannel .. ' (' .. channelParenthesis .. ')', centerX, 56, 16, "do")
+	myFont:Print(#shapes .. ' Shapes in current Channel of current Team, of ' .. shapeCount .. ' total shapes', centerX, 80, 16, "cdo")
+	myFont:End()
 	if needUpdateLabels then
-		labelDisplayList = glCreateList(DrawLabels, GetShapes(selectedTeamID, selectedChannel))
+		labelDisplayList = glCreateList(DrawLabels, shapes)
 		needUpdateLabels = false
 	end
 	glCallList(labelDisplayList)
