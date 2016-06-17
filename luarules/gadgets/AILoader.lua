@@ -269,7 +269,70 @@ end
 --UNSYNCED CODE
 else
 
-
+local function sdAddRectangle(_, x1, z1, x2, z2, r, g, b, a, label, filled, teamID, channel)
+	if (Script.LuaUI('ShardDrawAddRectangle')) then
+		Script.LuaUI.ShardDrawAddRectangle(x1, z1, x2, z2, {r, g, b, a}, label, filled, teamID, channel)
+	end
 end
 
+local function sdEraseRectangle(_, x1, z1, x2, z2, r, g, b, a, label, filled, teamID, channel)
+	if (Script.LuaUI('ShardDrawEraseRectangle')) then
+		Script.LuaUI.ShardDrawEraseRectangle(x1, z1, x2, z2, {r, g, b, a}, label, filled, teamID, channel)
+	end
+end
 
+local function sdAddCircle(_, x, z, radius, r, g, b, a, label, filled, teamID, channel)
+	if (Script.LuaUI('ShardDrawAddCircle')) then
+		Script.LuaUI.ShardDrawAddCircle(x, z, radius, {r, g, b, a}, label, filled, teamID, channel)
+	end
+end
+
+local function sdEraseCircle(_, x, z, radius, r, g, b, a, label, filled, teamID, channel)
+	if (Script.LuaUI('ShardDrawEraseCircle')) then
+		Script.LuaUI.ShardDrawEraseCircle(x, z, radius, {r, g, b, a}, label, filled, teamID, channel)
+	end
+end
+
+local function sdAddLine(_, x1, z1, x2, z2, r, g, b, a, label, teamID, channel)
+	if (Script.LuaUI('ShardDrawAddLine')) then
+		Script.LuaUI.ShardDrawAddLine(x1, z1, x2, z2, {r, g, b, a}, label, teamID, channel)
+	end
+end
+
+local function sdEraseLine(_, x1, z1, x2, z2, r, g, b, a, label, teamID, channel)
+	if (Script.LuaUI('ShardDrawEraseLine')) then
+		Script.LuaUI.ShardDrawEraseLine(x1, z1, x2, z2, {r, g, b, a}, label, teamID, channel)
+	end
+end
+
+local function sdAddPoint(_, x, z, r, g, b, a, label, teamID, channel)
+	if (Script.LuaUI('ShardDrawAddPoint')) then
+		Script.LuaUI.ShardDrawAddPoint(x, z, {r, g, b, a}, label, teamID, channel)
+	end
+end
+
+local function sdErasePoint(_, x, z, r, g, b, a, label, teamID, channel)
+	if (Script.LuaUI('ShardDrawErasePoint')) then
+		Script.LuaUI.ShardDrawErasePoint(x, z, {r, g, b, a}, label, teamID, channel)
+	end
+end
+
+local function sdClearShapes(_, teamID, channel)
+	if (Script.LuaUI('ShardDrawClearShapes')) then
+		Script.LuaUI.ShardDrawClearShapes(teamID, channel)
+	end
+end
+
+function gadget:Initialize()
+	gadgetHandler:AddSyncAction('ShardDrawAddRectangle', sdAddRectangle)
+	gadgetHandler:AddSyncAction('ShardDrawEraseRectangle', sdEraseRectangle)
+	gadgetHandler:AddSyncAction('ShardDrawAddCircle', sdAddCircle)
+	gadgetHandler:AddSyncAction('ShardDrawEraseCircle', sdEraseCircle)
+	gadgetHandler:AddSyncAction('ShardDrawAddLine', sdAddLine)
+	gadgetHandler:AddSyncAction('ShardDrawEraseLine', sdEraseLine)
+	gadgetHandler:AddSyncAction('ShardDrawAddPoint', sdAddPoint)
+	gadgetHandler:AddSyncAction('ShardDrawErasePoint', sdErasePoint)
+	gadgetHandler:AddSyncAction('ShardDrawClearShapes', sdClearShapes)
+end
+
+end
