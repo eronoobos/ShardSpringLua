@@ -13,6 +13,7 @@ end
 local aiTeams = {}
 local emptyShapeIDs = {}
 local teamChannelByID = {}
+local commandBindings = {}
 local shapeIDCounter = 0
 local lastCamState
 local selectedTeamID
@@ -94,6 +95,10 @@ local function split(pString, pPattern)
       table.insert(Table, cap)
    end
    return Table
+end
+
+local function trim(s)
+  return s:match'^()%s*$' and '' or s:match'^%s*(.*%S)'
 end
 
 -- using GL_POINT
@@ -480,22 +485,96 @@ local function DisplayOnOff(onOff)
 	displayOnOff = onOff
 end
 
+local function InterpretStringData(data)
+	local dataCount = #data
+	for i = 1, #data do
+		local d = data[i]
+		-- Spring.Echo(i, d, "(raw)")
+		if d == 'nil' then
+			d = false
+		elseif d == 'true' then
+			d = true
+		elseif d == 'false' then
+			d = false
+		elseif tonumber(d) then
+			d = tonumber(d)
+		else
+			-- Spring.Echo("label")
+			-- this is label, the previous is color
+			local color = { data[i-4], data[i-3], data[i-2], data[i-1] }
+			data[i-1] = color
+			data[i-2] = "REMOVE"
+			data[i-3] = "REMOVE"
+			data[i-4] = "REMOVE"
+		end
+		-- Spring.Echo(i, tostring(d), "(processed")
+		data[i] = d
+	end
+	local newData = {}
+	local ndi = 0
+	for i = 1, dataCount do
+		local d = data[i]
+		if d ~= "REMOVE" then
+			ndi = ndi + 1
+			newData[ndi] = d
+			-- Spring.Echo(ndi, tostring(d))
+		end
+	end
+	-- Spring.Echo(table.maxn(newData), "data fields out")
+	return newData
+end
+
+local function BindCommand(command, func)
+	widgetHandler:RegisterGlobal(command, func)
+	commandBindings[command] = func
+end
+
+local function ExecuteCommand(command, data)
+	local execFunc = commandBindings[command]
+	execFunc(unpack(data, 1, table.maxn(data)))
+end
+
 function widget:Initialize()
-	widgetHandler:RegisterGlobal("ShardDrawAddRectangle", AddRectangle)
-	widgetHandler:RegisterGlobal("ShardDrawAddCircle", AddCircle)
-	widgetHandler:RegisterGlobal("ShardDrawAddLine", AddLine)
-	widgetHandler:RegisterGlobal("ShardDrawAddPoint", AddPoint)
-	widgetHandler:RegisterGlobal("ShardDrawEraseShape", EraseShape)
-	widgetHandler:RegisterGlobal("ShardDrawEraseRectangle", EraseRectangle)
-	widgetHandler:RegisterGlobal("ShardDrawEraseCircle", EraseCircle)
-	widgetHandler:RegisterGlobal("ShardDrawEraseLine", EraseLine)
-	widgetHandler:RegisterGlobal("ShardDrawErasePoint", ErasePoint)
-	widgetHandler:RegisterGlobal("ShardDrawClearShapes", ClearShapes)
-	widgetHandler:RegisterGlobal("ShardDrawDisplay", DisplayOnOff)
+	BindCommand("ShardDrawAddRectangle", AddRectangle)
+	BindCommand("ShardDrawAddCircle", AddCircle)
+	BindCommand("ShardDrawAddLine", AddLine)
+	BindCommand("ShardDrawAddPoint", AddPoint)
+	BindCommand("ShardDrawEraseShape", EraseShape)
+	BindCommand("ShardDrawEraseRectangle", EraseRectangle)
+	BindCommand("ShardDrawEraseCircle", EraseCircle)
+	BindCommand("ShardDrawEraseLine", EraseLine)
+	BindCommand("ShardDrawErasePoint", ErasePoint)
+	BindCommand("ShardDrawClearShapes", ClearShapes)
+	BindCommand("ShardDrawDisplay", DisplayOnOff)
 	myFont = glLoadFont('LuaUI/Fonts/FreeSansBold.otf', 16, 4, 5)
 end
 
 function widget:GameFrame(frameNum)
+	local buff = io.open('sharddrawbuffer', 'r')
+	if buff then
+		for line in buff:lines() do
+			if line and line ~= '' and line ~= ' ' then
+				widget:RecvSkirmishAIMessage(nil, line)
+			end
+		end
+		buff:close()
+	end
+	local buffClear = io.open('sharddrawbuffer', 'w')
+	if buffClear then
+		buffClear:write(' ')
+		buffClear:close()
+	end
+end
+
+function widget:RecvSkirmishAIMessage(teamID, dataStr)
+	dataStr = trim(dataStr)
+	if dataStr:sub(1,9) == 'ShardDraw' then
+		local data = split(dataStr, '|')
+		local command = tRemove(data, 1)
+		-- Spring.Echo(command)
+		data = InterpretStringData(data)
+		ExecuteCommand(command, data)
+	end
 end
 
 function widget:KeyPress(key, mods, isRepeat)
