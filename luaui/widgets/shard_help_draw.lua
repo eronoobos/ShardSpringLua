@@ -25,6 +25,13 @@ local displayOnOff = true
 local shapeCount = 0
 local lastKey
 
+local colorLocations = {
+	Rectangle = 5,
+	Circle = 4,
+	Line = 5,
+	Point = 3,
+}
+
 local rectangleDisplayList = 0
 local circleDisplayList = 0
 local lineDisplayList = 0
@@ -163,6 +170,9 @@ local function CameraStatesMatch(stateA, stateB)
 	if #stateA ~= #stateB then return end
 	for key, value in pairs(stateA) do
 		if value ~= stateB[key] then return end
+	end
+	for key, value in pairs(stateB) do
+		if value ~= stateA[key] then return end
 	end
 	return true
 end
@@ -485,7 +495,15 @@ local function DisplayOnOff(onOff)
 	displayOnOff = onOff
 end
 
-local function InterpretStringData(data)
+local function InterpretStringData(data, command)
+	local colorLoc
+	for shapeTypeCapitalized, loc in pairs(colorLocations) do
+		if string.find(command, shapeTypeCapitalized) then
+			colorLoc = loc
+			-- Spring.Echo(command, shapeTypeCapitalized, colorLoc)
+			break
+		end
+	end
 	local dataCount = #data
 	for i = 1, #data do
 		local d = data[i]
@@ -498,23 +516,21 @@ local function InterpretStringData(data)
 			d = false
 		elseif tonumber(d) then
 			d = tonumber(d)
-		else
-			-- Spring.Echo("label")
-			-- this is label, the previous is color
-			local color = { data[i-4], data[i-3], data[i-2], data[i-1] }
-			data[i-1] = color
-			data[i-2] = "REMOVE"
-			data[i-3] = "REMOVE"
-			data[i-4] = "REMOVE"
 		end
 		-- Spring.Echo(i, tostring(d), "(processed")
 		data[i] = d
 	end
+	local color = {}
+	for i = 0, 3 do
+		color[i+1] = data[colorLoc+i]
+		if i > 0 then data[colorLoc+i] = "|REMOVE|" end
+	end
+	data[colorLoc] = color
 	local newData = {}
 	local ndi = 0
 	for i = 1, dataCount do
 		local d = data[i]
-		if d ~= "REMOVE" then
+		if d ~= "|REMOVE|" then
 			ndi = ndi + 1
 			newData[ndi] = d
 			-- Spring.Echo(ndi, tostring(d))
@@ -572,7 +588,7 @@ function widget:RecvSkirmishAIMessage(teamID, dataStr)
 		local data = split(dataStr, '|')
 		local command = tRemove(data, 1)
 		-- Spring.Echo(command)
-		data = InterpretStringData(data)
+		data = InterpretStringData(data, command)
 		ExecuteCommand(command, data)
 	end
 end
