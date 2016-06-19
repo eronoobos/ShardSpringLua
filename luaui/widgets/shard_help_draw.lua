@@ -24,6 +24,7 @@ local needUpdateRectangles, needUpdateCircles, needUpdateLines, needUpdatePoints
 local displayOnOff = true
 local shapeCount = 0
 local lastKey
+local shapesByString = {}
 
 local colorLocations = {
 	Rectangle = 5,
@@ -72,6 +73,7 @@ local glPointSize = gl.PointSize
 -- local glBeginText = gl.BeginText
 -- local glEndText = gl.EndText
 local glLoadFont = gl.LoadFont
+local glBlending = gl.Blending
 
 local GL_TRIANGLE_STRIP = GL.TRIANGLE_STRIP
 local GL_TRIANGLE_FAN = GL.TRIANGLE_FAN
@@ -201,7 +203,13 @@ local function DrawRectangles(shapes)
 		if shape.type == "rectangle" then
 			colorByTable(shape.color)
 			if shape.filled then
+				if type(shape.filled) == 'string' then
+					glBlending(shape.filled)
+				end
 				glBeginEnd(GL_TRIANGLE_STRIP, doRectangle, shape.x1, shape.z1, shape.x2, shape.z2, shape.y)
+				if type(shape.filled) == 'string' then
+					glBlending('reset')
+				end
 			else
 				glBeginEnd(GL_LINE_LOOP, doEmptyRectangle, shape.x1, shape.z1, shape.x2, shape.z2, shape.y)
 			end
@@ -222,7 +230,13 @@ local function DrawCircles(shapes)
 			colorByTable(shape.color)
 			local sides = mCeil(mSqrt(shape.radius))
 			if shape.filled then
+				if type(shape.filled) == 'string' then
+					glBlending(shape.filled)
+				end
 				glBeginEnd(GL_TRIANGLE_FAN, doCircle, shape.x, shape.y, shape.z, shape.radius, sides)
+				if type(shape.filled) == 'string' then
+					glBlending('reset')
+				end
 			else
 				glBeginEnd(GL_LINE_LOOP, doEmptyCircle, shape.x, shape.y, shape.z, shape.radius, sides)
 			end
@@ -361,6 +375,14 @@ local function GetShapeID()
 	return shapeIDCounter
 end
 
+local function GetShapeString(shape)
+	local shapeString = shape.x .. " " .. shape.z .. " " .. tostring(shape.filled)
+	if shape.x1 then
+		shapeString = shapeString .. " " .. shape.x1 .. " " .. shape.z1 .. " " .. shape.x2 .. " " .. shape.z2
+	end
+	return shapeString
+end
+
 local function AddShape(shape, teamID, channel)
 	channel = channel or 1
 	shape.id = GetShapeID()
@@ -371,6 +393,11 @@ local function AddShape(shape, teamID, channel)
 	color[4] = color[4] or 0.5
 	shape.color = color
 	local shapes = GetShapes(teamID, channel)
+	local shapeString = GetShapeString(shape)
+	shapesByString[shapeString] = shapesByString[shapeString] or {}
+	shape.y = shape.y + #shapesByString[shapeString] -- so that overlapping semitransparent shapes have an order
+	shape.string = shapeString
+	shapesByString[shapeString][#shapesByString[shapeString]+1] = shape
 	lastTeamID = teamID
 	lastChannel = channel
 	shapes[#shapes+1] = shape
@@ -465,7 +492,9 @@ local function EraseShape(id, address)
 	end
 	if address and shapes[address] then
 		emptyShapeIDs[#emptyShapeIDs+1] = id
+		teamChannelByID[id] = nil
 		local foundShape = tRemove(shapes, address)
+		shapesByString[foundShape.string] = nil
 		UpdateShapesByType(foundShape.type)
 		found = true
 		shapeCount = shapeCount - 1
@@ -689,10 +718,10 @@ function widget:Update()
 		pointDisplayList = glCreateList(DrawPoints, shapes)
 		needUpdatePoints = false
 	end
-	if needUpdateLabels then
-		labelDisplayList = glCreateList(DrawLabels, shapes)
-		needUpdateLabels = false
-	end
+	-- if needUpdateLabels then
+		-- labelDisplayList = glCreateList(DrawLabels, shapes)
+		-- needUpdateLabels = false
+	-- end
 	if needUpdateInterface then
 		interfaceDisplayList = glCreateList(DrawInterface)
 		needUpdateInterface = false
@@ -700,7 +729,7 @@ function widget:Update()
 	lastCamState = camState
 end
 
-function widget:DrawWorld()
+function widget:DrawWorldPreUnit()
 	if shapeCount == 0 or not displayOnOff or not selectedTeamID or not selectedChannel then
 		return
 	end
@@ -714,6 +743,7 @@ function widget:DrawScreen()
 	if shapeCount == 0 or not displayOnOff or not selectedTeamID or not selectedChannel then
 		return
 	end
-	glCallList(labelDisplayList)
+	-- glCallList(labelDisplayList)
+	DrawLabels(GetShapes(selectedTeamID, selectedChannel))
 	glCallList(interfaceDisplayList)
 end
