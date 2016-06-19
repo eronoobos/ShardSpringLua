@@ -33,6 +33,8 @@ local colorLocations = {
 	Point = 3,
 }
 
+local coordNames = { x, z, x1, z1, x2, z2, radius, y }
+
 local rectangleDisplayList = 0
 local circleDisplayList = 0
 local lineDisplayList = 0
@@ -41,6 +43,7 @@ local labelDisplayList = 0
 
 local tRemove = table.remove
 local mCeil = math.ceil
+local mAbs = math.abs
 local mSqrt = math.sqrt
 local mCos = math.cos
 local mSin = math.sin
@@ -268,17 +271,15 @@ end
 local function DrawPoints(shapes)
 	glDepthTest(false)
 	glPushMatrix()
-	glLineWidth(3)
 	glPointSize(9)
 	for i = 1, #shapes do
 		local shape = shapes[i]
 		if shape.type == "point" then
 			colorByTable(shape.color)
 			glBeginEnd(GL_POINTS, doPoint, shape.x, shape.y, shape.z)
-			glBeginEnd(GL_LINE_STRIP, doLine, shape.x, shape.y, shape.z, shape.x, shape.y+64, shape.z)
 		end
 	end
-	glLineWidth(1)
+	glPointSize(1)
 	glColor(1, 1, 1, 0.5)
 	glDepthTest(true)
 	glPopMatrix()
@@ -287,15 +288,23 @@ end
 local function DrawLabels(shapes)
 	-- glBeginText()
 	myFont:Begin()
+	local labels = {}
 	for i = 1, #shapes do
 		local shape = shapes[i]
 		if shape.label then
 			-- colorByTable(shape.color)
-			local sx, sy = spWorldToScreenCoords(shape.x, shape.yLabel or shape.y, shape.z)
+			local sx, sy = spWorldToScreenCoords(shape.x, shape.y, shape.z)
+			for l = 1, #labels do
+				local label = labels[l]
+				if mAbs(label.sx - sx) + mAbs(label.sy - sy) < 16 then
+					sy = sy + 16
+				end
+			end
 			-- glText(shape.label, sx, sy, 12, "cd")
 			local c = shape.color
 			myFont:SetTextColor(c[1], c[2], c[3], 1)
 			myFont:Print(shape.label, sx, sy, 12, "cdo")
+			labels[#labels+1] = {sx=sx, sy=sy}
 		end
 	end
 	myFont:End()
@@ -471,11 +480,16 @@ local function AddPoint(x, z, color, label, teamID, channel)
 		x = x,
 		z = z,
 		y = y,
-		yLabel = y + 64,
 		color = color,
 		label = label,
 	}
 	return AddShape(shape, teamID, channel)
+end
+
+local function AddLabel(x, z, color, label, teamID, channel)
+	color = color or {}
+	color[4] = 0
+	AddPoint(x, z, color, label, teamID, channel)
 end
 
 local function EraseShape(id, address)
@@ -506,88 +520,54 @@ local function EraseShape(id, address)
 	return found
 end
 
-local function EraseRectangle(x1, z1, x2, z2, color, label, filled, teamID, channel)
-	x1, z1, x2, z2 = mCeil(x1), mCeil(z1), mCeil(x2), mCeil(z2)
+local function EraseShapes(attributes, teamID, channel)
+	for k, v in pairs(attributes) do
+		if coordNames[k] then v = mCeil(v) end
+	end
 	local shapes = GetShapes(teamID, channel)
-	for i = 1, #shapes do
+	for i = #shapes, 1, -1 do
 		local shape = shapes[i]
-		if shape.type == "rectangle" then
-			if (not x1 or shape.x1 == x1) and (not z1 or shape.z1 == z1) and (not x2 or shape.x2 == x2) and (not z2 or shape.z2 == z2) and (not label or shape.label == label) then
-				if not color or (
-				(not color[1] or color[1] == shape.color[1]) and
-				(not color[2] or color[2] == shape.color[2]) and
-				(not color[3] or color[3] == shape.color[3]) and
-				(not color[4] or color[4] == shape.color[4])
-				) then
-					EraseShape(shape.id, i)
-					break
+		local match = true
+		for k, v in pairs(attributes) do
+			local shapeV = shape[k]
+			if v ~= shapeV then
+				if type(v) == 'table' then
+					if type(shapeV) == 'table' then
+						for kk, vv in pairs(v) do
+							if vv ~= shapeV[kk] then
+								match = false
+								break
+							end
+						end
+					else
+						match = false
+					end
+				else
+					match = false
 				end
 			end
+			if not match then break end
+		end
+		if match then
+			EraseShape(shape.id, i)
 		end
 	end
+end
+
+local function EraseRectangle(x1, z1, x2, z2, color, label, filled, teamID, channel)
+	EraseShapes({x1=x1, z1=z1, x2=x2, z2=z2, color=color, label=label, filled=filled}, teamID, channel)
 end
 
 local function EraseCircle(x, z, radius, color, label, filled, teamID, channel)
-	x, z, radius = mCeil(x), mCeil(z), mCeil(radius)
-	local shapes = GetShapes(teamID, channel)
-	for i = 1, #shapes do
-		local shape = shapes[i]
-		if shape.type == "circle" then
-			if (not x or shape.x == x) and (not z or shape.z == z) and (not radius or shape.radius == radius) and (not label or shape.label == label) then
-				if not color or (
-				(not color[1] or color[1] == shape.color[1]) and
-				(not color[2] or color[2] == shape.color[2]) and
-				(not color[3] or color[3] == shape.color[3]) and
-				(not color[4] or color[4] == shape.color[4])
-				) then
-					EraseShape(shape.id, i)
-					break
-				end
-			end
-		end
-	end
+	EraseShapes({x=x, z=z, radius=radius, color=color, label=label, filled=filled}, teamID, channel)
 end
 
 local function EraseLine(x1, z1, x2, z2, color, label, teamID, channel)
-	x1, z1, x2, z2 = mCeil(x1), mCeil(z1), mCeil(x2), mCeil(z2)
-	local shapes = GetShapes(teamID, channel)
-	for i = 1, #shapes do
-		local shape = shapes[i]
-		if shape.type == "line" then
-			if (not x1 or shape.x1 == x1) and (not z1 or shape.z1 == z1) and (not x2 or shape.x2 == x2) and (not z2 or shape.z2 == z2) and (not label or shape.label == label) then
-				if not color or (
-				(not color[1] or color[1] == shape.color[1]) and
-				(not color[2] or color[2] == shape.color[2]) and
-				(not color[3] or color[3] == shape.color[3]) and
-				(not color[4] or color[4] == shape.color[4])
-				) then
-					EraseShape(shape.id, i)
-					break
-				end
-			end
-		end
-	end
+	EraseShapes({x1=x1, z1=z1, x2=x2, z2=z2, color=color, label=label}, teamID, channel)
 end
 
 local function ErasePoint(x, z, color, label, teamID, channel)
-	x, z = mCeil(x), mCeil(z)
-	local shapes = GetShapes(teamID, channel)
-	for i = 1, #shapes do
-		local shape = shapes[i]
-		if shape.type == "point" then
-			if (not x or shape.x == x) and (not z or shape.z == z) and (not label or shape.label == label) then
-				if not color or (
-				(not color[1] or color[1] == shape.color[1]) and
-				(not color[2] or color[2] == shape.color[2]) and
-				(not color[3] or color[3] == shape.color[3]) and
-				(not color[4] or color[4] == shape.color[4])
-				) then
-					EraseShape(shape.id, i)
-					break
-				end
-			end
-		end
-	end
+	EraseShapes({x=x, z=z, color=color, label=label}, teamID, channel)
 end
 
 local function ClearShapes(teamID, channel)
