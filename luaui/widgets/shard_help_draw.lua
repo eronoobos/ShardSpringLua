@@ -408,6 +408,7 @@ local function AddShape(shape, teamID, channel)
 end
 
 local function AddRectangle(x1, z1, x2, z2, color, label, filled, teamID, channel)
+	x1, z1, x2, z2 = mCeil(x1), mCeil(z1), mCeil(x2), mCeil(z2)
 	local xAvg = mCeil( (x1 + x2) / 2 )
 	local zAvg = mCeil( (z1 + z2) / 2 )
 	local shape = {
@@ -427,6 +428,7 @@ local function AddRectangle(x1, z1, x2, z2, color, label, filled, teamID, channe
 end
 
 local function AddCircle(x, z, radius, color, label, filled, teamID, channel)
+	x, z, radius = mCeil(x), mCeil(z), mCeil(radius)
 	local shape = {
 		type = "circle",
 		x = x,
@@ -441,6 +443,7 @@ local function AddCircle(x, z, radius, color, label, filled, teamID, channel)
 end
 
 local function AddLine(x1, z1, x2, z2, color, label, teamID, channel)
+	x1, z1, x2, z2 = mCeil(x1), mCeil(z1), mCeil(x2), mCeil(z2)
 	local xAvg = mCeil( (x1 + x2) / 2 )
 	local zAvg = mCeil( (z1 + z2) / 2 )
 	local shape = {
@@ -461,6 +464,7 @@ local function AddLine(x1, z1, x2, z2, color, label, teamID, channel)
 end
 
 local function AddPoint(x, z, color, label, teamID, channel)
+	x, z = mCeil(x), mCeil(z)
 	local y = spGetGroundHeight(x, z)
 	local shape = {
 		type = "point",
@@ -503,19 +507,28 @@ local function EraseShape(id, address)
 end
 
 local function EraseRectangle(x1, z1, x2, z2, color, label, filled, teamID, channel)
+	x1, z1, x2, z2 = mCeil(x1), mCeil(z1), mCeil(x2), mCeil(z2)
 	local shapes = GetShapes(teamID, channel)
 	for i = 1, #shapes do
 		local shape = shapes[i]
 		if shape.type == "rectangle" then
 			if shape.x1 == x1 and shape.z1 == z1 and shape.x2 == x2 and shape.z2 == z2 and (not label or shape.label == label) then
-				EraseShape(shape.id, i)
-				break
+				if not color or (
+					(not color[1] or color[1] == shape.color[1]) and
+					(not color[2] or color[2] == shape.color[2]) and
+					(not color[3] or color[3] == shape.color[3]) and
+					(not color[4] or color[4] == shape.color[4])
+					) then
+					EraseShape(shape.id, i)
+					break
+				end
 			end
 		end
 	end
 end
 
 local function EraseCircle(x, z, radius, color, label, filled, teamID, channel)
+	x, z, radius = mCeil(x), mCeil(z), mCeil(radius)
 	local shapes = GetShapes(teamID, channel)
 	for i = 1, #shapes do
 		local shape = shapes[i]
@@ -528,7 +541,8 @@ local function EraseCircle(x, z, radius, color, label, filled, teamID, channel)
 	end
 end
 
-local function EraseLine(x, z, radius, color, label, teamID, channel)
+local function EraseLine(x1, z1, x2, z2, color, label, teamID, channel)
+	x1, z1, x2, z2 = mCeil(x1), mCeil(z1), mCeil(x2), mCeil(z2)
 	local shapes = GetShapes(teamID, channel)
 	for i = 1, #shapes do
 		local shape = shapes[i]
@@ -542,6 +556,7 @@ local function EraseLine(x, z, radius, color, label, teamID, channel)
 end
 
 local function ErasePoint(x, z, color, label, teamID, channel)
+	x, z = mCeil(x), mCeil(z)
 	local shapes = GetShapes(teamID, channel)
 	for i = 1, #shapes do
 		local shape = shapes[i]
