@@ -271,7 +271,7 @@ end
 local function DrawPoints(shapes)
 	glDepthTest(false)
 	glPushMatrix()
-	glPointSize(9)
+	glPointSize(6)
 	for i = 1, #shapes do
 		local shape = shapes[i]
 		if shape.type == "point" then
@@ -291,20 +291,24 @@ local function DrawLabels(shapes)
 	local labels = {}
 	for i = 1, #shapes do
 		local shape = shapes[i]
-		if shape.label then
+		if shape.label and spIsSphereInView(shape.x, shape.y, shape.z, 50) then
 			-- colorByTable(shape.color)
 			local sx, sy = spWorldToScreenCoords(shape.x, shape.y, shape.z)
+			local halfWidth = myFont:GetTextWidth(shape.label) * 6
 			for l = 1, #labels do
 				local label = labels[l]
-				if mAbs(label.sx - sx) + mAbs(label.sy - sy) < 16 then
-					sy = sy + 16
+				if mAbs(label.sx - sx) < halfWidth + label.halfWidth then
+					local dy = mAbs(label.sy - sy)
+					if dy < 16 then
+						sy = sy + (16-dy)
+					end
 				end
 			end
 			-- glText(shape.label, sx, sy, 12, "cd")
 			local c = shape.color
 			myFont:SetTextColor(c[1], c[2], c[3], 1)
 			myFont:Print(shape.label, sx, sy, 12, "cdo")
-			labels[#labels+1] = {sx=sx, sy=sy}
+			labels[#labels+1] = {sx=sx, sy=sy, halfWidth=halfWidth}
 		end
 	end
 	myFont:End()
@@ -484,12 +488,6 @@ local function AddPoint(x, z, color, label, teamID, channel)
 		label = label,
 	}
 	return AddShape(shape, teamID, channel)
-end
-
-local function AddLabel(x, z, color, label, teamID, channel)
-	color = color or {}
-	color[4] = 0
-	AddPoint(x, z, color, label, teamID, channel)
 end
 
 local function EraseShape(id, address)
