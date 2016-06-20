@@ -108,7 +108,8 @@ function gadget:Initialize()
 	end
 
 	-- catch up to started game
-	if Spring.GetGameFrame() > 1 then
+	local frame = Spring.GetGameFrame()
+	if frame > 0 then
 		self:GameStart()
 		-- catch up to current units
 		for _,uId in ipairs(spGetAllUnits()) do
@@ -317,6 +318,18 @@ local function sdErasePoint(_, x, z, r, g, b, a, label, teamID, channel)
 	end
 end
 
+local function sdAddUnit(_, unitID, r, g, b, a, label, teamID, channel)
+	if (Script.LuaUI('ShardDrawAddUnit')) then
+		Script.LuaUI.ShardDrawAddUnit(unitID, {r, g, b, a}, label, teamID, channel)
+	end
+end
+
+local function sdEraseUnit(_, unitID, r, g, b, a, label, teamID, channel)
+	if (Script.LuaUI('ShardDrawEraseUnit')) then
+		Script.LuaUI.ShardDrawEraseUnit(unitID, {r, g, b, a}, label, teamID, channel)
+	end
+end
+
 local function sdClearShapes(_, teamID, channel)
 	if (Script.LuaUI('ShardDrawClearShapes')) then
 		Script.LuaUI.ShardDrawClearShapes(teamID, channel)
@@ -338,6 +351,8 @@ function gadget:Initialize()
 	gadgetHandler:AddSyncAction('ShardDrawEraseLine', sdEraseLine)
 	gadgetHandler:AddSyncAction('ShardDrawAddPoint', sdAddPoint)
 	gadgetHandler:AddSyncAction('ShardDrawErasePoint', sdErasePoint)
+	gadgetHandler:AddSyncAction('ShardDrawAddUnit', sdAddUnit)
+	gadgetHandler:AddSyncAction('ShardDrawEraseUnit', sdEraseUnit)
 	gadgetHandler:AddSyncAction('ShardDrawClearShapes', sdClearShapes)
 	gadgetHandler:AddSyncAction('ShardDrawDisplay', sdDisplay)
 end

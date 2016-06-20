@@ -48,16 +48,19 @@ local mSqrt = math.sqrt
 local mCos = math.cos
 local mSin = math.sin
 local twicePi = math.pi * 2
+local mMin = math.min
+local mMax = math.max
 
 local spIsSphereInView = Spring.IsSphereInView
 local spGetGroundHeight = Spring.GetGroundHeight
 local spGetGroundInfo = Spring.GetGroundInfo
 local spWorldToScreenCoords = Spring.WorldToScreenCoords
 local spGetCameraState = Spring.GetCameraState
-local spTraceScreenRay = Spring.TraceScreenRay
-local spPos2BuildPos = Spring.Pos2BuildPos
 local spEcho = Spring.Echo
 local spGetViewGeometry = Spring.GetViewGeometry
+local spGetUnitPosition = Spring.GetUnitPosition
+local spGetUnitDefID = Spring.GetUnitDefID
+local spGetUnitTeam = Spring.GetUnitTeam
 
 local glCreateList = gl.CreateList
 local glCallList = gl.CallList
@@ -70,13 +73,14 @@ local glPopMatrix = gl.PopMatrix
 local glDepthTest = gl.DepthTest
 local glLineWidth = gl.LineWidth
 local glPointSize = gl.PointSize
--- local glTranslate = gl.Translate
--- local glBillboard = gl.Billboard
+local glTranslate = gl.Translate
+local glBillboard = gl.Billboard
 -- local glText = gl.Text
 -- local glBeginText = gl.BeginText
 -- local glEndText = gl.EndText
 local glLoadFont = gl.LoadFont
 local glBlending = gl.Blending
+local glUnitShape = gl.UnitShape
 
 local GL_TRIANGLE_STRIP = GL.TRIANGLE_STRIP
 local GL_TRIANGLE_FAN = GL.TRIANGLE_FAN
@@ -149,6 +153,16 @@ local function doEmptyCircle(x, y, z, radius, sides)
 		local cx = x + (radius * mCos(i * sideAngle))
 		local cz = z + (radius * mSin(i * sideAngle))
 		glVertex(cx, y, cz)
+	end
+end
+
+-- using GL_LINE_LOOP
+local function doEmptyCircle2d(x, y, radius, sides)
+	local sideAngle = twicePi / sides
+	for i = 1, sides do
+		local cx = x + (radius * mCos(i * sideAngle))
+		local cy = y + (radius * mSin(i * sideAngle))
+		glVertex(cx, cy)
 	end
 end
 
@@ -231,17 +245,16 @@ local function DrawCircles(shapes)
 		local shape = shapes[i]
 		if shape.type == "circle" then
 			colorByTable(shape.color)
-			local sides = mCeil(mSqrt(shape.radius))
 			if shape.filled then
 				if type(shape.filled) == 'string' then
 					glBlending(shape.filled)
 				end
-				glBeginEnd(GL_TRIANGLE_FAN, doCircle, shape.x, shape.y, shape.z, shape.radius, sides)
+				glBeginEnd(GL_TRIANGLE_FAN, doCircle, shape.x, shape.y, shape.z, shape.radius, shape.sides)
 				if type(shape.filled) == 'string' then
 					glBlending('reset')
 				end
 			else
-				glBeginEnd(GL_LINE_LOOP, doEmptyCircle, shape.x, shape.y, shape.z, shape.radius, sides)
+				glBeginEnd(GL_LINE_LOOP, doEmptyCircle, shape.x, shape.y, shape.z, shape.radius, shape.sides)
 			end
 		end
 	end
@@ -285,6 +298,25 @@ local function DrawPoints(shapes)
 	glPopMatrix()
 end
 
+local function DrawUnits(shapes)
+	glDepthTest(false)
+	glLineWidth(3)
+	glPushMatrix()
+	for i = 1, #shapes do
+		local shape = shapes[i]
+		if shape.type == "unit" then
+			colorByTable(shape.color)
+			glTranslate(shape.x, shape.y, shape.z)
+			glBillboard()
+			glBeginEnd(GL_LINE_LOOP, doEmptyCircle2d, 0, 0, shape.radius, shape.sides)
+		end
+	end
+	glColor(1, 1, 1, 0.5)
+	glPopMatrix()
+	glLineWidth(1)
+	glDepthTest(true)
+end
+
 local function DrawLabels(shapes)
 	-- glBeginText()
 	myFont:Begin()
@@ -307,6 +339,7 @@ local function DrawLabels(shapes)
 			-- glText(shape.label, sx, sy, 12, "cd")
 			local c = shape.color
 			myFont:SetTextColor(c[1], c[2], c[3], 1)
+			myFont:SetOutlineColor(shape.textOutlineColor)
 			myFont:Print(shape.label, sx, sy, 12, "cdo")
 			labels[#labels+1] = {sx=sx, sy=sy, halfWidth=halfWidth}
 		end
@@ -405,6 +438,12 @@ local function AddShape(shape, teamID, channel)
 	color[3] = color[3] or 1
 	color[4] = color[4] or 0.5
 	shape.color = color
+	local perceivedBrightness = mSqrt( 0.241*(color[1]^2) + 0.691*(color[2]^2) + 0.068*(color[3]^2) )
+	if perceivedBrightness < 0.5 then
+		shape.textOutlineColor = {1,1,1,1}
+	else
+		shape.textOutlineColor = {0,0,0,1}
+	end
 	local shapes = GetShapes(teamID, channel)
 	local shapeString = GetShapeString(shape)
 	shapesByString[shapeString] = shapesByString[shapeString] or {}
@@ -451,6 +490,7 @@ local function AddCircle(x, z, radius, color, label, filled, teamID, channel)
 		color = color,
 		label = label,
 		filled = filled,
+		sides = mCeil(mSqrt(radius*2)),
 	}
 	return AddShape(shape, teamID, channel)
 end
@@ -490,6 +530,28 @@ local function AddPoint(x, z, color, label, teamID, channel)
 	return AddShape(shape, teamID, channel)
 end
 
+local function AddUnit(unitID, color, label, teamID, channel)
+	local x, y, z = spGetUnitPosition(unitID)
+	local unitDefID = spGetUnitDefID(unitID)
+	local radius = mMax(UnitDefs[unitDefID].xsize, UnitDefs[unitDefID].zsize) * 5
+	color = color or {}
+	color[4] = 1
+	local shape = {
+		type = "unit",
+		unitID = unitID,
+		unitDefID = unitDefID,
+		teamID = spGetUnitTeam(unitID),
+		x = x,
+		y = y,
+		z = z,
+		radius = radius,
+		sides = mCeil(mSqrt(radius*2)),
+		color = color,
+		label = label,
+	}
+	return AddShape(shape, teamID, channel)
+end
+
 local function EraseShape(id, address)
 	local found = false
 	local tc = teamChannelByID[id]
@@ -520,7 +582,7 @@ end
 
 local function EraseShapes(attributes, teamID, channel)
 	for k, v in pairs(attributes) do
-		if coordNames[k] then v = mCeil(v) end
+		if coordNames[k] then attributes[k] = mCeil(v) end
 	end
 	local shapes = GetShapes(teamID, channel)
 	for i = #shapes, 1, -1 do
@@ -544,7 +606,9 @@ local function EraseShapes(attributes, teamID, channel)
 					match = false
 				end
 			end
-			if not match then break end
+			if not match then
+				break
+			end
 		end
 		if match then
 			EraseShape(shape.id, i)
@@ -568,6 +632,10 @@ local function ErasePoint(x, z, color, label, teamID, channel)
 	EraseShapes({x=x, z=z, color=color, label=label}, teamID, channel)
 end
 
+local function EraseUnit(unitID, color, label, teamID, channel)
+	EraseShapes({unitID=unitID, color=color, label=label}, teamID, channel)
+end
+
 local function ClearShapes(teamID, channel)
 	local shapes = GetShapes(teamID, channel)
 	for i = #shapes, 1, -1 do
@@ -579,6 +647,18 @@ end
 
 local function DisplayOnOff(onOff)
 	displayOnOff = onOff
+end
+
+local function UpdateUnitPositions(shapes)
+	for i = #shapes, 1, -1 do
+		local shape = shapes[i]
+		if shape.type == "unit" then
+			shape.x, shape.y, shape.z = spGetUnitPosition(shape.unitID)
+			if not shape.x then
+				EraseShape(shape.id, i)
+			end
+		end
+	end
 end
 
 local function InterpretStringData(data, command)
@@ -606,12 +686,14 @@ local function InterpretStringData(data, command)
 		-- Spring.Echo(i, tostring(d), "(processed")
 		data[i] = d
 	end
-	local color = {}
-	for i = 0, 3 do
-		color[i+1] = data[colorLoc+i]
-		if i > 0 then data[colorLoc+i] = "|REMOVE|" end
+	if colorLoc then
+		local color = {}
+		for i = 0, 3 do
+			color[i+1] = data[colorLoc+i]
+			if i > 0 then data[colorLoc+i] = "|REMOVE|" end
+		end
+		data[colorLoc] = color
 	end
-	data[colorLoc] = color
 	local newData = {}
 	local ndi = 0
 	for i = 1, dataCount do
@@ -641,15 +723,18 @@ function widget:Initialize()
 	BindCommand("ShardDrawAddCircle", AddCircle)
 	BindCommand("ShardDrawAddLine", AddLine)
 	BindCommand("ShardDrawAddPoint", AddPoint)
+	BindCommand("ShardDrawAddUnit", AddUnit)
 	BindCommand("ShardDrawEraseShape", EraseShape)
 	BindCommand("ShardDrawEraseRectangle", EraseRectangle)
 	BindCommand("ShardDrawEraseCircle", EraseCircle)
 	BindCommand("ShardDrawEraseLine", EraseLine)
 	BindCommand("ShardDrawErasePoint", ErasePoint)
+	BindCommand("ShardDrawEraseUnit", EraseUnit)
 	BindCommand("ShardDrawClearShapes", ClearShapes)
 	BindCommand("ShardDrawDisplay", DisplayOnOff)
 	myFont = glLoadFont('LuaUI/Fonts/FreeSansBold.otf', 16, 4, 5)
 	myMonoFont = glLoadFont('LuaUI/Fonts/DejaVuSansMono-Bold.ttf', 16, 4, 5)
+	-- myFont:SetAutoOutlineColor(true)
 end
 
 function widget:GameFrame(frameNum)
@@ -667,6 +752,11 @@ function widget:GameFrame(frameNum)
 		buffClear:write(' ')
 		buffClear:close()
 	end
+	if shapeCount == 0 or not displayOnOff or not selectedTeamID or not selectedChannel then
+		return
+	end
+	local shapes = GetShapes(selectedTeamID, selectedChannel)
+	UpdateUnitPositions(shapes)
 end
 
 function widget:RecvSkirmishAIMessage(teamID, dataStr)
@@ -706,10 +796,10 @@ function widget:Update()
 	if shapeCount == 0 or not displayOnOff then
 		return
 	end
-	local camState = spGetCameraState()
-	if not CameraStatesMatch(camState, lastCamState) then
-		UpdateLabels()
-	end
+	-- local camState = spGetCameraState()
+	-- if not CameraStatesMatch(camState, lastCamState) then
+		-- UpdateLabels()
+	-- end
 	selectedTeamID = selectedTeamID or lastTeamID
 	selectedChannel = selectedChannel or lastChannel
 	if not selectedTeamID or not selectedChannel then
@@ -753,11 +843,20 @@ function widget:DrawWorldPreUnit()
 	glCallList(pointDisplayList)
 end
 
+function widget:DrawWorld()
+	if shapeCount == 0 or not displayOnOff or not selectedTeamID or not selectedChannel then
+		return
+	end
+	local shapes = GetShapes(selectedTeamID, selectedChannel)
+	DrawUnits(shapes)
+end
+
 function widget:DrawScreen()
 	if shapeCount == 0 or not displayOnOff or not selectedTeamID or not selectedChannel then
 		return
 	end
 	-- glCallList(labelDisplayList)
-	DrawLabels(GetShapes(selectedTeamID, selectedChannel))
+	local shapes = GetShapes(selectedTeamID, selectedChannel)
+	DrawLabels(shapes)
 	glCallList(interfaceDisplayList)
 end
