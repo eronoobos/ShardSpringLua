@@ -161,7 +161,17 @@ function gadget:GameFrame(n)
 end
 
 
+function gadget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdParams, cmdOpts, cmdTag)
+	if cmdID < 0 then
+		local bdef = UnitDefs[unitDefID]
+		local udef = UnitDefs[-cmdID]
+		-- Spring.Echo(bdef.name, unitID, "received command to build", udef.name)
+	end
+end
+
 function gadget:UnitCreated(unitId, unitDefId, teamId, builderId) 
+	local udef = UnitDefs[unitDefId]
+	-- Spring.Echo(udef.name, unitId, "created")
 	-- for each AI...
 	local unit = Shard:shardify_unit(unitId)
     for _,thisAI in ipairs(AIs) do
@@ -294,15 +304,15 @@ local function sdEraseCircle(_, x, z, radius, r, g, b, a, label, filled, teamID,
 	end
 end
 
-local function sdAddLine(_, x1, z1, x2, z2, r, g, b, a, label, teamID, channel)
+local function sdAddLine(_, x1, z1, x2, z2, r, g, b, a, label, arrow, teamID, channel)
 	if (Script.LuaUI('ShardDrawAddLine')) then
-		Script.LuaUI.ShardDrawAddLine(x1, z1, x2, z2, {r, g, b, a}, label, teamID, channel)
+		Script.LuaUI.ShardDrawAddLine(x1, z1, x2, z2, {r, g, b, a}, label, arrow, teamID, channel)
 	end
 end
 
-local function sdEraseLine(_, x1, z1, x2, z2, r, g, b, a, label, teamID, channel)
+local function sdEraseLine(_, x1, z1, x2, z2, r, g, b, a, label, arrow, teamID, channel)
 	if (Script.LuaUI('ShardDrawEraseLine')) then
-		Script.LuaUI.ShardDrawEraseLine(x1, z1, x2, z2, {r, g, b, a}, label, teamID, channel)
+		Script.LuaUI.ShardDrawEraseLine(x1, z1, x2, z2, {r, g, b, a}, label, arrow, teamID, channel)
 	end
 end
 
