@@ -223,29 +223,22 @@ function gadget:GameFrame(n)
     end
 end
 
-
-function gadget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdParams, cmdOpts, cmdTag)
-	if cmdID < 0 then
-		local bdef = UnitDefs[unitDefID]
-		local udef = UnitDefs[-cmdID]
-		-- Spring.Echo(bdef.name, unitID, "received command to build", udef.name)
-	end
-end
-
 function gadget:UnitCreated(unitID, unitDefID, teamID, builderID)
 	local x, y, z = spGetUnitPosition(unitID)
 	-- Spring.Echo("unit created", builderID, -unitDefID, x, y, z)
 	RemoveActiveCommands(builderID, -unitDefID, {x, y, z})
 	local udef = UnitDefs[unitDefID]
-	-- Spring.Echo(udef.name, unitID, "created")
 	-- for each AI...
 	local unit = Shard:shardify_unit(unitID)
     for _,thisAI in ipairs(AIs) do
-    	if Spring.GetUnitTeam(unitID) == thisAI.id then
-	    	prepareTheAI(thisAI)
-	    	thisAI:UnitCreated(unit)
-	    end
-		-- thisAI:UnitCreated(unitID, unitDefID, teamID, builderID)
+    	prepareTheAI(thisAI)
+    	if teamID == thisAI.id then
+    		thisAI:UnitCreated(unit)
+    	elseif thisAI.alliedTeamIds[teamID] then
+    		-- thisAI:AllyUnitCreated(unit)
+    	else
+    		-- thisAI:EnemyUnitCreated(unit)
+    	end
 	end
 end
 
@@ -255,8 +248,13 @@ function gadget:UnitDestroyed(unitID, unitDefID, teamID, attackerId, attackerDef
 	if unit then
 		for _,thisAI in ipairs(AIs) do
 			prepareTheAI(thisAI)
-			thisAI:UnitDead(unit)
-			-- thisAI:UnitDestroyed(unitID, unitDefID, teamID, attackerId, attackerDefId, attackerTeamId)
+			if teamID == thisAI.id then
+    			thisAI:UnitDead(unit)
+	    	elseif thisAI.alliedTeamIds[teamID] then
+	    		-- thisAI:AllyUnitDead(unit)
+	    	else
+	    		-- thisAI:EnemyUnitDead(unit)
+	    	end
 		end
 		Shard:unshardify_unit(self.engineUnit)
 	end
@@ -271,8 +269,13 @@ function gadget:UnitDamaged(unitID, unitDefID, unitTeamId, damage, paralyzer, we
 		local damageObj = Shard:shardify_damage(damage, weaponDefId, paralyzer)
 	    for _,thisAI in ipairs(AIs) do
 	    	prepareTheAI(thisAI)
-	    	thisAI:UnitDamaged(unit, attackerUnit, damageObj)
-			-- thisAI:UnitDamaged(unitID, unitDefID, unitTeamId, attackerId, attackerDefId, attackerTeamId)
+	    	if teamID == thisAI.id then
+	    		thisAI:UnitDamaged(unit, attackerUnit, damageObj)
+	    	elseif thisAI.alliedTeamIds[teamID] then
+	    		-- thisAI:AllyUnitDamaged(unit, attackerUnit, damageObj)
+	    	else
+	    		-- thisAI:EnemyUnitDamaged(unit, attackerUnit, damageObj)
+	    	end
 		end	
 	end
 end
@@ -284,8 +287,13 @@ function gadget:UnitIdle(unitID, unitDefID, teamID)
 	if unit then
 	    for _,thisAI in ipairs(AIs) do
 	    	prepareTheAI(thisAI)
-	    	thisAI:UnitIdle(unit)
-			-- thisAI:UnitIdle(unitID, unitDefID, teamID)
+	    	if teamID == thisAI.id then
+    			thisAI:UnitIdle(unit)
+	    	elseif thisAI.alliedTeamIds[teamID] then
+	    		-- thisAI:AllyUnitIdle(unit)
+	    	else
+	    		-- thisAI:EnemyUnitIdle(unit)
+	    	end
 		end
 	end
 end
@@ -315,7 +323,13 @@ function gadget:UnitFinished(unitID, unitDefID, teamID)
 	    for _,thisAI in ipairs(AIs) do
 			-- thisAI:UnitFinished(unitID, unitDefID, teamID)
 			prepareTheAI(thisAI)
-			thisAI:UnitBuilt(unit)
+			if teamID == thisAI.id then
+    			thisAI:UnitBuilt(unit)
+	    	elseif thisAI.alliedTeamIds[teamID] then
+	    		-- thisAI:AllyUnitBuilt(unit)
+	    	else
+	    		-- thisAI:EnemyUnitBuilt(unit)
+	    	end
 		end
 	end
 end
@@ -325,8 +339,13 @@ function gadget:UnitTaken(unitID, unitDefID, teamID, newTeamID)
 	if unit then
 	    for _,thisAI in ipairs(AIs) do
 	    	prepareTheAI(thisAI)
-			-- thisAI:UnitTaken(unitID, unitDefID, teamID, newTeamID)
-			-- thisAI:UnitDead(unit)
+	    	if teamID == thisAI.id then
+    			thisAI:UnitDead(unit)
+	    	elseif thisAI.alliedTeamIds[teamID] then
+	    		-- thisAI:AllyUnitDead(unit)
+	    	else
+	    		-- thisAI:EnemyUnitDead(unit)
+	    	end
 		end
 	end
 end
@@ -336,8 +355,13 @@ function gadget:UnitGiven(unitID, unitDefID, teamID, oldTeamId)
 	if unit then
 	    for _,thisAI in ipairs(AIs) do
 	    	prepareTheAI(thisAI)
-			-- thisAI:UnitCreated(unitID, unitDefID, teamID, oldTeamId)
-			thisAI:UnitCreated(unit)
+	    	if teamID == thisAI.id then
+    			thisAI:UnitGiven(unit)
+	    	elseif thisAI.alliedTeamIds[teamID] then
+	    		-- thisAI:AllyUnitGiven(unit)
+	    	else
+	    		-- thisAI:EnemyUnitGiven(unit)
+	    	end
 		end
 	end
 end
