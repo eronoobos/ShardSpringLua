@@ -106,8 +106,7 @@ function AI:UnitIdle(engineunit)
 	if engineunit == nil then
 		self.game:SendToConsole("shard-warning: idle engineunit nil")
 		return
-	end
-	
+	end	
 	for i,m in ipairs(self.modules) do
 		m:UnitIdle(engineunit)
 	end
