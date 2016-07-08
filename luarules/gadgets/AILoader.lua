@@ -243,6 +243,7 @@ function gadget:UnitCreated(unitID, unitDefID, teamID, builderID)
 end
 
 function gadget:UnitDestroyed(unitID, unitDefID, teamID, attackerId, attackerDefId, attackerTeamId) 
+	RemoveActiveCommands(unitID)
 	-- for each AI...
 	local unit = Shard:shardify_unit(unitID)
 	if unit then
@@ -299,8 +300,7 @@ function gadget:UnitIdle(unitID, unitDefID, teamID)
 end
 
 function gadget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdParams, cmdOpts, cmdTag)
-	if #cmdParams == 3 and (cmdID < 0 or cmdID == CMD.MOVE) then
-		-- it's a position
+	if #cmdParams == 3 and (cmdID < 0 or cmdID == CMD.MOVE) and not UnitDefs[unitDefID].isBuilding then
 		-- Spring.Echo("got position command", UnitDefs[unitDefID].name, unitID, cmdID, cmdParams[1], cmdParams[2], cmdParams[3])
 		local _, _, _, _, buildProgress = spGetUnitHealth(unitID)
 		if buildProgress == 1 then
@@ -310,7 +310,7 @@ function gadget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdParams, cmdOp
 end
 
 function gadget:UnitCmdDone(unitID, unitDefID, unitTeam, cmdID, cmdParams, cmdOpts, cmdTag)
-	if #cmdParams == 3 and (cmdID < 0 or cmdID == CMD.MOVE) then
+	if #cmdParams == 3 and (cmdID < 0 or cmdID == CMD.MOVE) and not UnitDefs[unitDefID].isBuilding then
 		-- Spring.Echo("position command done", UnitDefs[unitDefID].name, unitID, cmdID, cmdParams[1], cmdParams[2], cmdParams[3])
 		RemoveActiveCommands(unitID, cmdID, cmdParams)
 	end
