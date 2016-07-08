@@ -76,7 +76,7 @@ local function AddActiveCommand(unitID, cmdID, cmdParams)
 		cmdID = cmdID,
 		cmdParams = cmdParams,
 		frame = frame,
-		nextCheck = frame + 150,
+		nextCheck = frame + 300,
 		lastX = x,
 		lastY = y,
 		lastZ = z,
@@ -89,15 +89,23 @@ local function RemoveActiveCommands(unitID, cmdID, cmdParams)
 		if (not unitID or ac.unitID == unitID) and (not cmdID or ac.cmdID == cmdID) then
 			local match = true
 			if cmdParams then
-				for ip = 1, #cmdParams do
-					if cmdParams[ip] ~= ac.cmdParams[ip] then
+				if #cmdParams == 3 then
+					local x, y, z = cmdParams[1], cmdParams[2], cmdParams[3]
+					local ax, ay, az = ac.cmdParams[1], ac.cmdParams[2], ac.cmdParams[3]
+					if not (x > ax - 16 and x < ax + 16 and z > az - 16 and z < az + 16) then
 						match = false
-						break
+					end
+				else
+					for ip = 1, #cmdParams do
+						if cmdParams[ip] ~= ac.cmdParams[ip] then
+							match = false
+							break
+						end
 					end
 				end
 			end
 			if match then
-				-- Spring.Echo("removed active command", ac.unitID, ac.cmdID, ac.cmdParams[1], ac.cmdParams[2], ac.cmdParams[3])
+				-- Spring.Echo("removed active command", UnitDefs[Spring.GetUnitDefID(ac.unitID)].name, ac.unitID, ac.cmdID, ac.cmdParams[1], ac.cmdParams[2], ac.cmdParams[3])
 				tRemove(activeCommands, i)
 			end
 		end
@@ -184,14 +192,21 @@ function gadget:GameFrame(n)
 				tRemove(activeCommands, i)
 				local unit = Shard:shardify_unit(ac.unitID)
 				if unit then
+					local unitTeam = spGetUnitTeam(ac.unitID)
 				    for _,thisAI in ipairs(AIs) do
-				    	prepareTheAI(thisAI)
-				    	thisAI:UnitMoveFailed(unit)
+					    prepareTheAI(thisAI)
+				    	if unitTeam == thisAI.id then
+					    	thisAI:UnitMoveFailed(unit)
+					    elseif thisAI.alliedTeamIds[unitTeam] then
+					    	-- thisAI:AllyUnitMoveFailed()
+					    else
+					    	-- thisAI:EnemyUnitMoveFailed()
+					    end
 					end
 				end
 			else
 				ac.lastX, ac.lastY, ac.lastZ = x, y, z
-				ac.nextCheck = n + 150
+				ac.nextCheck = n + 300
 			end
 		end
 	end
@@ -225,7 +240,9 @@ end
 
 function gadget:UnitCreated(unitID, unitDefID, teamID, builderID)
 	local x, y, z = spGetUnitPosition(unitID)
-	-- Spring.Echo("unit created", builderID, -unitDefID, x, y, z)
+	-- if builderID then
+	-- 	Spring.Echo("unit created by", UnitDefs[Spring.GetUnitDefID(builderID)].name, builderID, -unitDefID, x, y, z)
+	-- end
 	RemoveActiveCommands(builderID, -unitDefID, {x, y, z})
 	local udef = UnitDefs[unitDefID]
 	-- for each AI...
@@ -304,6 +321,7 @@ function gadget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdParams, cmdOp
 		-- Spring.Echo("got position command", UnitDefs[unitDefID].name, unitID, cmdID, cmdParams[1], cmdParams[2], cmdParams[3])
 		local _, _, _, _, buildProgress = spGetUnitHealth(unitID)
 		if buildProgress == 1 then
+			RemoveActiveCommands(unitID)
 			AddActiveCommand(unitID, cmdID, cmdParams)
 		end
 	end
