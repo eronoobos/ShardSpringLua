@@ -195,26 +195,28 @@ function gadget:GameFrame(n)
 				tRemove(activeCommands, i)
 			else
 				local x, y, z = spGetUnitPosition(ac.unitID)
-				if (ac.lastX == x and ac.lastZ == z) or (mAbs(x-ac.lastX) + mAbs(z-ac.lastZ) < 10) then
-					-- unit move failed
-					tRemove(activeCommands, i)
-					local unit = Shard:shardify_unit(ac.unitID)
-					if unit then
-						local unitTeam = spGetUnitTeam(ac.unitID)
-					    for _,thisAI in ipairs(AIs) do
-						    prepareTheAI(thisAI)
-					    	if unitTeam == thisAI.id then
-						    	thisAI:UnitMoveFailed(unit)
-						    elseif thisAI.alliedTeamIds[unitTeam] then
-						    	-- thisAI:AllyUnitMoveFailed()
-						    else
-						    	-- thisAI:EnemyUnitMoveFailed()
-						    end
+				if x ~= nil then
+					if (ac.lastX == x and ac.lastZ == z) or (mAbs(x-ac.lastX) + mAbs(z-ac.lastZ) < 10) then
+						-- unit move failed
+						tRemove(activeCommands, i)
+						local unit = Shard:shardify_unit(ac.unitID)
+						if unit then
+							local unitTeam = spGetUnitTeam(ac.unitID)
+						    for _,thisAI in ipairs(AIs) do
+							    prepareTheAI(thisAI)
+						    	if unitTeam == thisAI.id then
+							    	thisAI:UnitMoveFailed(unit)
+							    elseif thisAI.alliedTeamIds[unitTeam] then
+							    	-- thisAI:AllyUnitMoveFailed()
+							    else
+							    	-- thisAI:EnemyUnitMoveFailed()
+							    end
+							end
 						end
+					else
+						ac.lastX, ac.lastY, ac.lastZ = x, y, z
+						ac.nextCheck = n + 200
 					end
-				else
-					ac.lastX, ac.lastY, ac.lastZ = x, y, z
-					ac.nextCheck = n + 200
 				end
 			end
 		end
