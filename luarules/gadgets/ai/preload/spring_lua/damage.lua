@@ -12,9 +12,17 @@ function ShardSpringDamage:Init( damage, weaponDefID, paralyzer, projectileID, e
 	self.projectileID = projectileID
 	self.attacker = engineAttacker
 	self.gameframe = spGetGameFrame()
-	self.direction = spGetProjectileDirection(projectileID)
+	if projectileID then
+		local dx, dy, dz = spGetProjectileDirection(projectileID)
+		self.direction = {x=dx, y=dy, z=dz}
+	end
 	self.damageType = weaponDefID
-	self.weaponType = WeaponDefs[weaponDefID].name
+	if weaponDefID then
+		local weaponDef = WeaponDefs[weaponDefID]
+		if weaponDef then
+			self.weaponType = WeaponDefs[weaponDefID].name
+		end
+	end
 end
 
 function ShardSpringDamage:Damage()
