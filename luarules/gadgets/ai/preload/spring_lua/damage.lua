@@ -20,7 +20,7 @@ function ShardSpringDamage:Init( damage, weaponDefID, paralyzer, projectileID, e
 	if weaponDefID then
 		local weaponDef = WeaponDefs[weaponDefID]
 		if weaponDef then
-			self.weaponType = WeaponDefs[weaponDefID].name
+			self.weaponType = weaponDef.name
 		end
 	end
 end
