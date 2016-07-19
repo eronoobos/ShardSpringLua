@@ -205,6 +205,7 @@ function map:DrawPoint(pos, color, label, channel)
 end
 
 function map:ErasePoint(pos, color, label, channel)
+	pos = pos or {}
 	channel = channel or 1
 	color = color or {}
 	SendToUnsynced('ShardDrawErasePoint', pos.x, pos.z, color[1], color[2], color[3], color[4], label, self.ai.game:GetTeamID(), channel)
