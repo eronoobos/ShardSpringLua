@@ -1,7 +1,7 @@
 AI = class(AIBase)
 
 function AI:Init()
-	self.EnableDebugTimers = true
+	self.EnableDebugTimers = false
 
 	ai = self
 	self.api = shard_include("preload/api")
@@ -158,7 +158,7 @@ function AI:AddModule( newmodule )
 	newmodule:Init()
 end
 
-function AI:AddDebugTimers(module)
+function AI:AddDebugTimers(module, name)
 	local badKeys = {
 			is_a = true,
 			__index = true,
@@ -166,7 +166,7 @@ function AI:AddDebugTimers(module)
 			internalName = true,
 			Name = true,
 	}
-	local moduleName = module:Name()
+	local moduleName = name or module:Name()
 	for k, v in pairs(module) do
 		if type(v) == 'function' and not badKeys[k] then
 			local passthroughStopTimer = function(...)

@@ -785,7 +785,6 @@ local function StopTimer(name)
 end
 
 local function CollectTimerStats()
-	spEcho("collect timer stats")
 	timerGotStats = {}
 	for name, stats in pairs(timerStats) do
 		stats.avg = stats.sum / stats.count
