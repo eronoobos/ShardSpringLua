@@ -10,6 +10,7 @@ function widget:GetInfo()
 	}
 end
 
+local timerStatCollectionFrames = 120
 local lineArrowSize = 80
 
 local aiTeams = {}
@@ -22,12 +23,17 @@ local selectedTeamID
 local selectedChannel
 local lastTeamID
 local lastChannel
-local needUpdateRectangles, needUpdateCircles, needUpdateLines, needUpdatePoints, needUpdateLabels
+local needUpdateRectangles, needUpdateCircles, needUpdateLines, needUpdatePoints, needUpdateLabels, needUpdateTimers
 local displayOnOff = true
 local shapeCount = 0
 local lastKey
 local shapesByString = {}
 local timers = {}
+local timerResults = {}
+local timerStats = {}
+local timerGotStats = {}
+local timerSavedNames = {}
+local lastTimerStatFrame = 0
 
 local colorLocations = {
 	Rectangle = 5,
@@ -43,6 +49,7 @@ local circleDisplayList = 0
 local lineDisplayList = 0
 local pointDisplayList = 0
 local labelDisplayList = 0
+local timerDisplayList = 0
 
 local tRemove = table.remove
 local mCeil = math.ceil
@@ -185,6 +192,16 @@ local function doRectangleFlat(x1, z1, x2, z2, y)
 	glVertex(x1, y, z1)
 	glVertex(x1, y, z2)
 	glVertex(x2, y, z2)
+end
+
+-- using GL_TRIANGLE_STRIP
+local function doRectangle2d(x1, y1, x2, y2)
+	glVertex(x1, y1)
+	glVertex(x2, y1)
+	glVertex(x2, y2)
+	glVertex(x1, y1)
+	glVertex(x1, y2)
+	glVertex(x2, y2)
 end
 
 -- using GL_TRIANGLE_STRIP
@@ -410,6 +427,51 @@ local function DrawInterface()
 	myMonoFont:End()
 end
 
+local function DrawTimers()
+	local viewX, viewY, posX, posY = spGetViewGeometry()
+	local nameX = viewX-210
+	local barX = viewX-205
+	local msX = viewX - 100
+	myFont:Begin()
+	myFont:SetTextColor(1,1,1,1)
+	local i = 0
+	local msMax = 0
+	for name, _ in pairs(timerSavedNames) do
+		local stats = timerGotStats[name]
+		if stats then
+			local ms = stats.sum
+			if ms > 0 then
+				if ms > msMax then
+					msMax = ms
+				end
+			end
+			myFont:Print(ms .. " | " .. stats.min .. " | " .. stats.max, msX, 5+10*i, 10, "do")
+		end
+		myFont:Print(name, nameX, 5+10*i, 10, "dro")
+		i = i + 1
+	end
+	myFont:End()
+	local i = 0
+	for name, _ in pairs(timerSavedNames) do
+		local stats = timerGotStats[name]
+		if stats then
+			local ms = stats.sum
+			if ms > 0 then
+				local r = ms / msMax
+				local g = 1 - r
+				local w = r * 100
+				glColor(r,g,0,1)
+				local y1 = 5+10*i
+				local x2 = barX + w
+				local y2 = y1+10
+				glBeginEnd(GL_TRIANGLE_STRIP, doRectangle2d, barX, y1, x2, y2)
+			end
+		end
+		i = i + 1
+	end
+	glColor(1,1,1,0.5)
+end
+
 local function UpdateInterface()
 	needUpdateInterface = true
 end
@@ -417,6 +479,10 @@ end
 local function UpdateLabels()
 	needUpdateLabels = true
 	UpdateInterface()
+end
+
+local function UpdateTimers()
+	needUpdateTimers = true
 end
 
 local function UpdateShapesByType(shapeType)
@@ -701,10 +767,35 @@ local function StopTimer(name)
 	-- spEcho("stop timer", name, timers[name])
 	if not timers[name] then return end
 	local ms = spDiffTimers(spGetTimer(), timers[name])
-	if ms > 0 then
+	if ms > 100 then
 		spEcho(ms .. "ms", name)
 	end
+	timerResults[name] = ms
+	timerStats[name] = timerStats[name] or {}
+	local stats = timerStats[name]
+	if not stats.max or ms > stats.max then
+		stats.max = ms
+	end
+	if not stats.min or ms < stats.min then
+		stats.min = ms
+	end
+	stats.sum = (stats.sum or 0) + ms
+	stats.count = (stats.count or 0) + 1
 	timers[name] = nil
+end
+
+local function CollectTimerStats()
+	spEcho("collect timer stats")
+	timerGotStats = {}
+	for name, stats in pairs(timerStats) do
+		stats.avg = stats.sum / stats.count
+		timerGotStats[name] = stats
+		if stats.sum > 0.01 then
+			timerSavedNames[name] = true
+		end
+	end
+	timerStats = {}
+	UpdateTimers()
 end
 
 local function UpdateUnitPositions(shapes)
@@ -812,6 +903,10 @@ function widget:GameFrame(frameNum)
 		buffClear:write(' ')
 		buffClear:close()
 	end
+	if frameNum > lastTimerStatFrame + timerStatCollectionFrames then
+		CollectTimerStats()
+		lastTimerStatFrame = frameNum
+	end
 	if shapeCount == 0 or not displayOnOff or not selectedTeamID or not selectedChannel then
 		return
 	end
@@ -853,6 +948,10 @@ function widget:KeyPress(key, mods, isRepeat)
 end
 
 function widget:Update()
+	if needUpdateTimers then
+		timerDisplayList = glCreateList(DrawTimers)
+		needUpdateTimers = false
+	end
 	if shapeCount == 0 or not displayOnOff then
 		return
 	end
@@ -912,6 +1011,7 @@ function widget:DrawWorld()
 end
 
 function widget:DrawScreen()
+	glCallList(timerDisplayList)
 	if shapeCount == 0 or not displayOnOff or not selectedTeamID or not selectedChannel then
 		return
 	end

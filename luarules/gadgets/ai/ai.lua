@@ -1,7 +1,7 @@
 AI = class(AIBase)
 
 function AI:Init()
-	self.EnableDebugTimers = false
+	self.EnableDebugTimers = true
 
 	ai = self
 	self.api = shard_include("preload/api")
