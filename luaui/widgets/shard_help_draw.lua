@@ -27,6 +27,7 @@ local displayOnOff = true
 local shapeCount = 0
 local lastKey
 local shapesByString = {}
+local timers = {}
 
 local colorLocations = {
 	Rectangle = 5,
@@ -63,6 +64,8 @@ local spGetViewGeometry = Spring.GetViewGeometry
 local spGetUnitPosition = Spring.GetUnitPosition
 local spGetUnitDefID = Spring.GetUnitDefID
 local spGetUnitTeam = Spring.GetUnitTeam
+local spGetTimer = Spring.GetTimer
+local spDiffTimers = Spring.DiffTimers
 
 local glCreateList = gl.CreateList
 local glCallList = gl.CallList
@@ -689,6 +692,21 @@ local function DisplayOnOff(onOff)
 	displayOnOff = onOff
 end
 
+local function StartTimer(name)
+	-- spEcho("start timer", name)
+	timers[name] = spGetTimer()
+end
+
+local function StopTimer(name)
+	-- spEcho("stop timer", name, timers[name])
+	if not timers[name] then return end
+	local ms = spDiffTimers(spGetTimer(), timers[name])
+	if ms > 0 then
+		spEcho(ms .. "ms", name)
+	end
+	timers[name] = nil
+end
+
 local function UpdateUnitPositions(shapes)
 	for i = #shapes, 1, -1 do
 		local shape = shapes[i]
@@ -772,6 +790,8 @@ function widget:Initialize()
 	BindCommand("ShardDrawEraseUnit", EraseUnit)
 	BindCommand("ShardDrawClearShapes", ClearShapes)
 	BindCommand("ShardDrawDisplay", DisplayOnOff)
+	BindCommand("ShardStartTimer", StartTimer)
+	BindCommand("ShardStopTimer", StopTimer)
 	myFont = glLoadFont('LuaUI/Fonts/FreeSansBold.otf', 16, 4, 5) or glLoadFont('fonts/FreeSansBold.otf', 16, 4, 5)
 	myMonoFont = glLoadFont('LuaUI/Fonts/DejaVuSansMono-Bold.ttf', 16, 4, 5) or myFont
 	-- myFont:SetAutoOutlineColor(true)
