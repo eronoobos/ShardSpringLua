@@ -452,7 +452,8 @@ local function DrawTimers()
 	if i == 0 then return end
 	i = 0
 	for name, _ in pairs(timerSavedNames) do
-		local y = 5 + (10 * i)
+		local y1 = 5 + (15 * i)
+		local y2 = y1 + 10
 		for c = 1, #columns do
 			local col = columns[c]
 			local stats = col.stats[name]
@@ -465,9 +466,7 @@ local function DrawTimers()
 					local w = r * 100
 					glColor(r,g,0,1)
 					local x1 = viewX - (105*c)
-					local y1 = 5+10*i
 					local x2 = x1 + w
-					local y2 = y1+10
 					glBeginEnd(GL_TRIANGLE_STRIP, doRectangle2d, x1, y1, x2, y2)
 				end
 			end
@@ -478,7 +477,7 @@ local function DrawTimers()
 	myFont:SetTextColor(1,1,1,1)
 	i = 0
 	for name, _ in pairs(timerSavedNames) do
-		local y = 5 + (10 * i)
+		local y = 5 + (15 * i)
 		for c = 1, #columns do
 			local col = columns[c]
 			local stats = col.stats[name]
@@ -491,7 +490,7 @@ local function DrawTimers()
 		myFont:Print(name, nameX, y, 10, "dro")
 		i = i + 1
 	end
-	local columnHeadingY = 5 + (i * 10)
+	local columnHeadingY = 5 + (i * 15)
 	for c = 1, #columns do
 		local col = columns[c]
 		local x = viewX - 55 - (105 * (c - 1))
