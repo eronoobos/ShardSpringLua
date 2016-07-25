@@ -28,12 +28,15 @@ local displayOnOff = true
 local shapeCount = 0
 local lastKey
 local shapesByString = {}
+
 local timers = {}
 local timerResults = {}
 local timerStats = {}
 local timerGotStats = {}
+local timerPermaStats = {}
 local timerSavedNames = {}
 local lastTimerStatFrame = 0
+local timerColumns = {}
 
 local colorLocations = {
 	Rectangle = 5,
@@ -428,47 +431,73 @@ local function DrawInterface()
 end
 
 local function DrawTimers()
+	local columns = timerColumns
 	local viewX, viewY, posX, posY = spGetViewGeometry()
-	local nameX = viewX-210
-	local barX = viewX-205
-	local msX = viewX - 100
-	myFont:Begin()
-	myFont:SetTextColor(1,1,1,1)
+	local totalColumnsWidth = 5 + (105 * #columns)
+	local nameX = viewX - totalColumnsWidth
 	local i = 0
-	local msMax = 0
 	for name, _ in pairs(timerSavedNames) do
-		local stats = timerGotStats[name]
-		if stats then
-			local ms = stats.sum
-			if ms > 0 then
-				if ms > msMax then
-					msMax = ms
+		for c = 1, #columns do
+			local col = columns[c]
+			local stats = col.stats[name]
+			if stats then
+				local num = stats[col.field]
+				if not col.max or num > col.max then
+					col.max = num
 				end
 			end
-			myFont:Print(ms .. " | " .. stats.min .. " | " .. stats.max, msX, 5+10*i, 10, "do")
 		end
-		myFont:Print(name, nameX, 5+10*i, 10, "dro")
 		i = i + 1
 	end
-	myFont:End()
-	local i = 0
+	if i == 0 then return end
+	i = 0
 	for name, _ in pairs(timerSavedNames) do
-		local stats = timerGotStats[name]
-		if stats then
-			local ms = stats.sum
-			if ms > 0 then
-				local r = ms / msMax
-				local g = 1 - r
-				local w = r * 100
-				glColor(r,g,0,1)
-				local y1 = 5+10*i
-				local x2 = barX + w
-				local y2 = y1+10
-				glBeginEnd(GL_TRIANGLE_STRIP, doRectangle2d, barX, y1, x2, y2)
+		local y = 5 + (10 * i)
+		for c = 1, #columns do
+			local col = columns[c]
+			local stats = col.stats[name]
+			if stats then
+				local num = stats[col.field]
+				local numMax = col.max
+				if num > 0 and numMax and numMax > 0 then
+					local r = num / numMax
+					local g = 1 - r
+					local w = r * 100
+					glColor(r,g,0,1)
+					local x1 = viewX - (105*c)
+					local y1 = 5+10*i
+					local x2 = x1 + w
+					local y2 = y1+10
+					glBeginEnd(GL_TRIANGLE_STRIP, doRectangle2d, x1, y1, x2, y2)
+				end
 			end
 		end
 		i = i + 1
 	end
+	myFont:Begin()
+	myFont:SetTextColor(1,1,1,1)
+	i = 0
+	for name, _ in pairs(timerSavedNames) do
+		local y = 5 + (10 * i)
+		for c = 1, #columns do
+			local col = columns[c]
+			local stats = col.stats[name]
+			if stats then
+				local num = stats[col.field]
+				local x = viewX - 55 - (105 * (c - 1))
+				myFont:Print(num .. col.unit, x, y, 10, "dco")
+			end
+		end
+		myFont:Print(name, nameX, y, 10, "dro")
+		i = i + 1
+	end
+	local columnHeadingY = 5 + (i * 10)
+	for c = 1, #columns do
+		local col = columns[c]
+		local x = viewX - 55 - (105 * (c - 1))
+		myFont:Print(col.heading .. ' ' .. col.field .. ' ' .. col.unit, x, columnHeadingY, 10, "dco")
+	end
+	myFont:End()
 	glColor(1,1,1,0.5)
 end
 
@@ -781,6 +810,16 @@ local function StopTimer(name)
 	end
 	stats.sum = (stats.sum or 0) + ms
 	stats.count = (stats.count or 0) + 1
+	timerPermaStats[name] = timerPermaStats[name] or {}
+	local permaStats = timerPermaStats[name]
+	if not permaStats.max or ms > permaStats.max then
+		permaStats.max = ms
+	end
+	if not permaStats.min or ms < permaStats.min then
+		permaStats.min = ms
+	end
+	permaStats.sum = (permaStats.sum or 0) + ms
+	permaStats.count = (permaStats.count or 0) + 1
 	timers[name] = nil
 end
 
@@ -793,7 +832,18 @@ local function CollectTimerStats()
 			timerSavedNames[name] = true
 		end
 	end
+	for name, stats in pairs(timerPermaStats) do
+		stats.avg = stats.sum / stats.count
+	end
 	timerStats = {}
+	timerColumns = {
+		{stats = timerGotStats, field = 'sum', unit = 'ms', heading = '4 second'},
+		{stats = timerGotStats, field = 'avg', unit = 'ms', heading = '4 second'},
+		{stats = timerGotStats, field = 'count', unit = ' calls', heading = '4 second'},
+		{stats = timerPermaStats, field = 'sum', unit = 'ms', heading = 'all time'},
+		{stats = timerPermaStats, field = 'avg', unit = 'ms', heading = 'all time'},
+		{stats = timerPermaStats, field = 'count', unit = ' calls', heading = 'all time'},
+	}
 	UpdateTimers()
 end
 
