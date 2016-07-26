@@ -104,13 +104,18 @@ local GL_LINE_STRIP = GL.LINE_STRIP
 local GL_LINE_LOOP = GL.LINE_LOOP
 local GL_POINTS = GL.POINTS
 
-local function round(val, decimal)
-  if decimal then
-  	local tenDecimal =  10^decimal
-    return mFloor( (val * tenDecimal) + 0.5) / tenDecimal
-  else
-    return mFloor(val+0.5)
+local function pairsByKeys(t, f)
+  local a = {}
+  for n in pairs(t) do table.insert(a, n) end
+  table.sort(a, f)
+  local i = 0      -- iterator variable
+  local iter = function ()   -- iterator function
+    i = i + 1
+    if a[i] == nil then return nil
+    else return a[i], t[a[i]]
+    end
   end
+  return iter
 end
 
 local function justWords(str)
@@ -476,8 +481,13 @@ local function DrawTimers()
 	local barWidth = mCeil(rowHeight * longestHeadingWidth)
 	local halfBarWidth = mCeil(barWidth / 2)
 	local colWidth = barWidth + spacing
-	i = 0
+	local namesBySum = {}
 	for name, _ in pairs(timerSavedNames) do
+		local stats = timerPermaStats[name]
+		namesBySum[stats.sum] = name
+	end
+	i = 0
+	for _, name in pairsByKeys(namesBySum) do
 		local y1 = 5 + (rowHeight * i)
 		local y2 = y1 + rowHeight
 		for c = 1, #columns do
@@ -504,7 +514,7 @@ local function DrawTimers()
 	myFont:Begin()
 	myFont:SetTextColor(1,1,1,1)
 	i = 0
-	for name, _ in pairs(timerSavedNames) do
+	for _, name in pairsByKeys(namesBySum) do
 		local y = 5 + (rowHeight * i)
 		for c = 1, #columns do
 			local col = columns[c]
@@ -1101,20 +1111,6 @@ function widget:DrawScreen()
 	glCallList(interfaceDisplayList)
 end
 
-local function pairsByKeys(t, f)
-  local a = {}
-  for n in pairs(t) do table.insert(a, n) end
-  table.sort(a, f)
-  local i = 0      -- iterator variable
-  local iter = function ()   -- iterator function
-    i = i + 1
-    if a[i] == nil then return nil
-    else return a[i], t[a[i]]
-    end
-  end
-  return iter
-end
-
 local function EchoStats(name, stats, longestName, longestKV, headings)
 	local outStr = name
 	if string.len(name) < longestName then
@@ -1169,7 +1165,6 @@ function widget:Shutdown()
 	for name, stats in pairs(timerPermaStats) do
 		namesBySum[-stats.sum] = name
 	end
-	-- for name, stats in pairs(timerPermaStats) do
 	for _, name in pairsByKeys(namesBySum) do
 		local stats = timerPermaStats[name]
 		if stats.max > 0 then
