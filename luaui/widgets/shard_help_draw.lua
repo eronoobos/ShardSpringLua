@@ -55,6 +55,7 @@ local labelDisplayList = 0
 local timerDisplayList = 0
 
 local tRemove = table.remove
+local mFloor = math.floor
 local mCeil = math.ceil
 local mAbs = math.abs
 local mSqrt = math.sqrt
@@ -102,6 +103,15 @@ local GL_TRIANGLE_FAN = GL.TRIANGLE_FAN
 local GL_LINE_STRIP = GL.LINE_STRIP
 local GL_LINE_LOOP = GL.LINE_LOOP
 local GL_POINTS = GL.POINTS
+
+local function round(val, decimal)
+  if decimal then
+  	local tenDecimal =  10^decimal
+    return mFloor( (val * tenDecimal) + 0.5) / tenDecimal
+  else
+    return mFloor(val+0.5)
+  end
+end
 
 local function justWords(str)
   local words = {}
@@ -433,9 +443,15 @@ end
 local function DrawTimers()
 	local columns = timerColumns
 	local viewX, viewY, posX, posY = spGetViewGeometry()
-	local totalColumnsWidth = 5 + (105 * #columns)
-	local nameX = viewX - totalColumnsWidth
 	local i = 0
+	local longestHeadingWidth
+	for c = 1, #columns do
+		local col = columns[c]
+		local width = myFont:GetTextWidth(col.heading .. ' ' .. col.field .. ' ' .. col.unit)
+		if not longestHeadingWidth or width > longestHeadingWidth then
+			longestHeadingWidth = width
+		end
+	end
 	for name, _ in pairs(timerSavedNames) do
 		for c = 1, #columns do
 			local col = columns[c]
@@ -450,10 +466,20 @@ local function DrawTimers()
 		i = i + 1
 	end
 	if i == 0 then return end
+	local rows = i+0
+	local rowHeight = 12
+	local spacing = 5
+	local doubleSpacing = spacing * 2
+	if (rows + 1) * rowHeight > viewY - doubleSpacing then
+		rowHeight = mFloor((viewY - doubleSpacing) / (rows+1))
+	end
+	local barWidth = mCeil(rowHeight * longestHeadingWidth)
+	local halfBarWidth = mCeil(barWidth / 2)
+	local colWidth = barWidth + spacing
 	i = 0
 	for name, _ in pairs(timerSavedNames) do
-		local y1 = 5 + (10 * i)
-		local y2 = y1 + 10
+		local y1 = 5 + (rowHeight * i)
+		local y2 = y1 + rowHeight
 		for c = 1, #columns do
 			local col = columns[c]
 			local stats = col.stats[name]
@@ -463,9 +489,9 @@ local function DrawTimers()
 				if num > 0 and numMax and numMax > 0 then
 					local r = num / numMax
 					local g = 1 - r
-					local w = r * 100
+					local w = r * barWidth
 					glColor(r,g,0,1)
-					local x1 = viewX - (105*c)
+					local x1 = viewX - (colWidth*c)
 					local x2 = x1 + w
 					glBeginEnd(GL_TRIANGLE_STRIP, doRectangle2d, x1, y1, x2, y2)
 				end
@@ -473,28 +499,30 @@ local function DrawTimers()
 		end
 		i = i + 1
 	end
+	local totalColumnsWidth = 5 + (colWidth * #columns)
+	local nameX = viewX - totalColumnsWidth
 	myFont:Begin()
 	myFont:SetTextColor(1,1,1,1)
 	i = 0
 	for name, _ in pairs(timerSavedNames) do
-		local y = 5 + (10 * i)
+		local y = 5 + (rowHeight * i)
 		for c = 1, #columns do
 			local col = columns[c]
 			local stats = col.stats[name]
 			if stats then
 				local num = stats[col.field]
-				local x = viewX - 55 - (105 * (c - 1))
-				myFont:Print(num .. col.unit, x, y, 10, "dco")
+				local x = viewX - (colWidth - halfBarWidth) - (colWidth * (c - 1))
+				myFont:Print(num .. col.unit, x, y, rowHeight, "dco")
 			end
 		end
-		myFont:Print(name, nameX, y, 10, "dro")
+		myFont:Print(name, nameX, y, rowHeight, "dro")
 		i = i + 1
 	end
-	local columnHeadingY = 5 + (10 * i)
+	local columnHeadingY = 5 + (rowHeight * i)
 	for c = 1, #columns do
 		local col = columns[c]
-		local x = viewX - 55 - (105 * (c - 1))
-		myFont:Print(col.heading .. ' ' .. col.field .. ' ' .. col.unit, x, columnHeadingY, 10, "dco")
+		local x = viewX - (colWidth - halfBarWidth) - (colWidth * (c - 1))
+		myFont:Print(col.heading .. ' ' .. col.field .. ' ' .. col.unit, x, columnHeadingY, rowHeight, "dco")
 	end
 	myFont:End()
 	glColor(1,1,1,0.5)
@@ -836,12 +864,16 @@ local function CollectTimerStats()
 	end
 	timerStats = {}
 	timerColumns = {
-		{stats = timerGotStats, field = 'sum', unit = 'ms', heading = '4 second'},
-		{stats = timerGotStats, field = 'avg', unit = 'ms', heading = '4 second'},
-		{stats = timerGotStats, field = 'count', unit = ' calls', heading = '4 second'},
-		{stats = timerPermaStats, field = 'sum', unit = 'ms', heading = 'all time'},
-		{stats = timerPermaStats, field = 'avg', unit = 'ms', heading = 'all time'},
-		{stats = timerPermaStats, field = 'count', unit = ' calls', heading = 'all time'},
+		{stats = timerGotStats, field = 'sum', unit = 'ms', heading = '120gf'},
+		{stats = timerGotStats, field = 'avg', unit = 'ms', heading = '120gf'},
+		-- {stats = timerGotStats, field = 'min', unit = 'ms', heading = '120gf'},
+		{stats = timerGotStats, field = 'max', unit = 'ms', heading = '120gf'},
+		{stats = timerGotStats, field = 'count', unit = ' calls', heading = '120gf'},
+		{stats = timerPermaStats, field = 'sum', unit = 'ms', heading = 'total'},
+		{stats = timerPermaStats, field = 'avg', unit = 'ms', heading = 'total'},
+		-- {stats = timerPermaStats, field = 'min', unit = 'ms', heading = 'total'},
+		{stats = timerPermaStats, field = 'max', unit = 'ms', heading = 'total'},
+		{stats = timerPermaStats, field = 'count', unit = ' calls', heading = 'total'},
 	}
 	UpdateTimers()
 end
@@ -1067,4 +1099,81 @@ function widget:DrawScreen()
 	local shapes = GetShapes(selectedTeamID, selectedChannel)
 	DrawLabels(shapes)
 	glCallList(interfaceDisplayList)
+end
+
+local function pairsByKeys(t, f)
+  local a = {}
+  for n in pairs(t) do table.insert(a, n) end
+  table.sort(a, f)
+  local i = 0      -- iterator variable
+  local iter = function ()   -- iterator function
+    i = i + 1
+    if a[i] == nil then return nil
+    else return a[i], t[a[i]]
+    end
+  end
+  return iter
+end
+
+local function EchoStats(name, stats, longestName, longestKV, headings)
+	local outStr = name
+	if string.len(name) < longestName then
+		for i = 1, longestName - string.len(name) do
+			outStr = outStr .. ' '
+		end
+	end
+	outStr = outStr .. "\t"
+	for k, v in pairs(stats) do
+		local str = tostring(v)
+		if headings then str = k end
+		outStr = outStr .. str
+		if string.len(str) < longestKV[k] then
+			for i = 1, longestKV[k] - string.len(str) do
+				outStr = outStr .. ' '
+			end
+		end
+		outStr = outStr .. "\t"
+	end
+	spEcho(outStr)
+end
+
+function widget:Shutdown()
+	local longestName
+	local anyName
+	local longestKV = {}
+	local i = 0
+	for name, stats in pairs(timerPermaStats) do
+		if stats.max > 0 then
+			if not anyName then anyName = name end
+			if not longestName or string.len(name) > longestName then
+				longestName = string.len(name)
+			end
+			for k, v in pairs(stats) do
+				local str = tostring(v)
+				local l = string.len(str)
+				if string.len(k) > l then
+					str = k
+					l = string.len(k)
+				end
+				if not longestKV[k] or l > longestKV[k] then
+					longestKV[k] = l
+				end
+			end
+			i = i + 1
+		end
+	end
+	if i == 0 then return end
+	Spring.SendCommands('screenshot')
+	EchoStats('', timerPermaStats[anyName], longestName, longestKV, true)
+	local namesBySum = {}
+	for name, stats in pairs(timerPermaStats) do
+		namesBySum[-stats.sum] = name
+	end
+	-- for name, stats in pairs(timerPermaStats) do
+	for _, name in pairsByKeys(namesBySum) do
+		local stats = timerPermaStats[name]
+		if stats.max > 0 then
+			EchoStats(name, stats, longestName, longestKV)
+		end
+	end
 end
